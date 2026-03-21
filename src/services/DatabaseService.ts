@@ -150,6 +150,12 @@ export async function deleteTransaction(id: number): Promise<void> {
   await database.runAsync('DELETE FROM transactions WHERE id = ?', id);
 }
 
+export async function clearAllTransactions(): Promise<void> {
+  if (isWeb) return;
+  const database = await getDb();
+  await database.runAsync('DELETE FROM transactions');
+}
+
 export async function getAllTransactions(): Promise<Transaction[]> {
   if (isWeb) return webFallback.all();
 

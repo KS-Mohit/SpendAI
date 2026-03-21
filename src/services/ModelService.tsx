@@ -8,6 +8,9 @@ import React, {
 
 import { Platform } from 'react-native';
 
+// Set to true when testing on x86_64 emulator (native LLM crashes on emulator)
+const FORCE_MOCK_LLM = false;
+
 // RunAnywhere imports — only available on native (Android/iOS)
 let RunAnywhere: any = null;
 let SDKEnvironment: any = null;
@@ -32,11 +35,11 @@ if (Platform.OS !== 'web') {
 }
 
 // ── Model IDs ──
-const LLM_MODEL_ID = 'lfm2-350m-q8_0';
-const LLM_MODEL_NAME = 'LFM2 350M';
+const LLM_MODEL_ID = 'lfm2-350m-q4_k_m';
+const LLM_MODEL_NAME = 'LFM2 350M Q4_K_M';
 const LLM_MODEL_URL =
-  'https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q8_0.gguf';
-const LLM_MODEL_MEMORY = 400_000_000;
+  'https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q4_K_M.gguf';
+const LLM_MODEL_MEMORY = 250_000_000;
 
 const STT_MODEL_ID = 'sherpa-onnx-whisper-tiny.en';
 const STT_MODEL_NAME = 'Sherpa Whisper Tiny (ONNX)';
@@ -222,34 +225,45 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
 
       // ── Load all models ──
       setStatus('loading');
+      console.log('[SpendAI] Loading models...');
 
       // Load LLM
       const llmInfo = await RunAnywhere.getModelInfo(LLM_MODEL_ID);
+      console.log('[SpendAI] LLM info:', JSON.stringify({ localPath: llmInfo?.localPath }));
       if (!llmInfo?.localPath) throw new Error('LLM localPath missing');
+      console.log('[SpendAI] Loading LLM...');
       await RunAnywhere.loadModel(llmInfo.localPath);
+      console.log('[SpendAI] LLM loaded!');
 
       // Load STT (Whisper)
       try {
         const sttInfo = await RunAnywhere.getModelInfo(STT_MODEL_ID);
+        console.log('[SpendAI] STT info:', JSON.stringify({ localPath: sttInfo?.localPath }));
         if (sttInfo?.localPath) {
+          console.log('[SpendAI] Loading STT...');
           await RunAnywhere.loadSTTModel(sttInfo.localPath, 'whisper');
           setSttReady(true);
+          console.log('[SpendAI] STT loaded!');
         }
       } catch (e) {
-        console.warn('STT model load failed:', e);
+        console.warn('[SpendAI] STT model load failed:', e);
       }
 
       // Load TTS (Piper)
       try {
         const ttsInfo = await RunAnywhere.getModelInfo(TTS_MODEL_ID);
+        console.log('[SpendAI] TTS info:', JSON.stringify({ localPath: ttsInfo?.localPath }));
         if (ttsInfo?.localPath) {
+          console.log('[SpendAI] Loading TTS...');
           await RunAnywhere.loadTTSModel(ttsInfo.localPath, 'piper');
           setTtsReady(true);
+          console.log('[SpendAI] TTS loaded!');
         }
       } catch (e) {
-        console.warn('TTS model load failed:', e);
+        console.warn('[SpendAI] TTS model load failed:', e);
       }
 
+      console.log('[SpendAI] All models loaded, status → ready');
       setStatus('ready');
     } catch (err: any) {
       console.error('Model init error:', err);
@@ -270,6 +284,11 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         return webMockGenerate(prompt);
       }
 
+      if (FORCE_MOCK_LLM) {
+        await new Promise((r) => setTimeout(r, 800));
+        return webMockGenerate(prompt);
+      }
+
       const streamResult = await RunAnywhere.generateStream(prompt, {
         maxTokens,
         temperature: 0.8,
@@ -279,7 +298,7 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
       for await (const token of streamResult.stream) {
         response += token;
       }
-      return response;
+      return response || webMockGenerate(prompt);
     },
     [status]
   );
@@ -314,7 +333,19 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
           result.audio,
           result.sampleRate || 22050
         );
-        await RunAnywhere.Audio.playAudio(wavPath);
+        // Play using expo-av since react-native-sound is not installed
+        const { Audio } = require('expo-av');
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: wavPath },
+          { shouldPlay: true }
+        );
+        soundRef.current = sound;
+        sound.setOnPlaybackStatusUpdate((s: any) => {
+          if (s.didJustFinish) {
+            sound.unloadAsync();
+            soundRef.current = null;
+          }
+        });
       } else {
         // Fallback to system TTS
         try {
@@ -327,150 +358,197 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     [ttsReady]
   );
 
+  const soundRef = useRef<any>(null);
+
   const stopSpeaking = useCallback(async (): Promise<void> => {
-    if (!RunAnywhere) return;
-    try {
-      await RunAnywhere.Audio.stopPlayback();
-    } catch {
-      try { await RunAnywhere.stopSpeaking(); } catch {}
+    if (soundRef.current) {
+      try {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      } catch {}
     }
   }, []);
 
-  // ── Voice session using RunAnywhere built-in pipeline ──
-  const voiceSessionRef = useRef<any>(null);
+  // ── Record with react-native-live-audio-stream (raw PCM) + transcribe ──
+  const audioChunksRef = useRef<string[]>([]);
 
   const startListening = useCallback(
     async (onResult: (text: string) => void): Promise<void> => {
       if (!RunAnywhere || !sttReady) return;
 
       listenCallbackRef.current = onResult;
+      audioChunksRef.current = [];
 
       try {
-        const session = await RunAnywhere.startVoiceSession(
-          {
-            agentConfig: {
-              llmModelId: LLM_MODEL_ID,
-              sttModelId: STT_MODEL_ID,
-              ttsModelId: TTS_MODEL_ID,
-              systemPrompt: 'You are a helpful expense tracking assistant. Keep responses brief.',
-              generationOptions: {
-                maxTokens: 150,
-                temperature: 0.7,
-              },
-            },
-            enableVAD: true,
-            vadSensitivity: 0.5,
-            speechTimeout: 3000,
-          },
-          (event: any) => {
-            if (event.type === 'transcriptionComplete' && event.data?.transcript) {
-              if (listenCallbackRef.current) {
-                listenCallbackRef.current(event.data.transcript.trim());
-              }
-            }
-          }
-        );
-        voiceSessionRef.current = session;
+        const LiveAudioStream = require('react-native-live-audio-stream').default;
+
+        LiveAudioStream.init({
+          sampleRate: 16000,
+          channels: 1,
+          bitsPerSample: 16,
+          audioSource: 6, // VOICE_RECOGNITION
+        });
+
+        LiveAudioStream.on('data', (base64Chunk: string) => {
+          audioChunksRef.current.push(base64Chunk);
+        });
+
+        LiveAudioStream.start();
         setIsListening(true);
       } catch (e) {
-        console.warn('Voice session start failed, falling back to manual recording:', e);
-        // Fallback to manual recording with expo-av
-        await startManualRecording(onResult);
+        console.warn('LiveAudioStream failed, trying expo-av fallback:', e);
+        // Fallback to expo-av
+        try {
+          const { Audio } = require('expo-av');
+          const { granted } = await Audio.requestPermissionsAsync();
+          if (!granted) return;
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+          const recording = new Audio.Recording();
+          await recording.prepareToRecordAsync({
+            android: {
+              extension: '.m4a',
+              outputFormat: 2,
+              audioEncoder: 3,
+              sampleRate: 16000,
+              numberOfChannels: 1,
+              bitRate: 128000,
+            },
+            ios: {
+              extension: '.wav',
+              outputFormat: 'linearPCM' as any,
+              audioQuality: 127,
+              sampleRate: 16000,
+              numberOfChannels: 1,
+              bitRate: 128000,
+              linearPCMBitDepth: 16,
+              linearPCMIsBigEndian: false,
+              linearPCMIsFloat: false,
+            },
+            web: {},
+          });
+          await recording.startAsync();
+          audioChunksRef.current = []; // mark as expo-av mode
+          (audioChunksRef as any)._expoRecording = recording;
+          setIsListening(true);
+        } catch (e2) {
+          console.warn('All recording methods failed:', e2);
+          setIsListening(false);
+        }
       }
     },
     [sttReady]
   );
 
-  // Fallback manual recording for when voice session is unavailable
-  const recordingRef = useRef<any>(null);
-
-  const startManualRecording = useCallback(
-    async (onResult: (text: string) => void): Promise<void> => {
-      try {
-        const { Audio } = require('expo-av');
-        const { granted } = await Audio.requestPermissionsAsync();
-        if (!granted) return;
-
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-
-        const recording = new Audio.Recording();
-        await recording.prepareToRecordAsync({
-          android: {
-            extension: '.wav',
-            outputFormat: 2,
-            audioEncoder: 1,
-            sampleRate: 16000,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          ios: {
-            extension: '.wav',
-            outputFormat: 'linearPCM' as any,
-            audioQuality: 127,
-            sampleRate: 16000,
-            numberOfChannels: 1,
-            bitRate: 128000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-          web: {},
-        });
-        await recording.startAsync();
-        recordingRef.current = recording;
-        listenCallbackRef.current = onResult;
-        setIsListening(true);
-      } catch (e) {
-        console.warn('Manual recording failed:', e);
-        setIsListening(false);
-      }
-    },
-    []
-  );
-
   const stopListening = useCallback(async (): Promise<void> => {
     setIsListening(false);
 
-    // Stop voice session if active
-    if (voiceSessionRef.current) {
-      try {
-        await voiceSessionRef.current.stop();
-      } catch (e) {
-        console.warn('Voice session stop failed:', e);
-      }
-      voiceSessionRef.current = null;
+    if (!RunAnywhere || !sttReady) {
       listenCallbackRef.current = null;
       return;
     }
 
-    // Stop manual recording fallback
-    if (!recordingRef.current) return;
-
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      let base64Audio: string | null = null;
 
-      if (!uri || !RunAnywhere || !sttReady) return;
+      // Try LiveAudioStream first
+      try {
+        const LiveAudioStream = require('react-native-live-audio-stream').default;
+        LiveAudioStream.stop();
 
-      const RNFS = require('react-native-fs');
-      const base64Audio = await RNFS.readFile(uri, 'base64');
+        if (audioChunksRef.current.length > 0) {
+          // Combine PCM chunks and create a WAV with proper header
+          const pcmChunks = audioChunksRef.current;
+          const totalBytes = pcmChunks.reduce((sum, chunk) => {
+            return sum + Math.ceil((chunk.length * 3) / 4); // base64 → bytes estimate
+          }, 0);
 
-      const result = await RunAnywhere.transcribe(base64Audio, {
-        language: 'en',
-        sampleRate: 16000,
-      });
+          // Write PCM data to a temp file, then create WAV
+          const RNFS = require('react-native-fs');
+          const pcmPath = RNFS.CachesDirectoryPath + '/recording_pcm.raw';
+          const wavPath = RNFS.CachesDirectoryPath + '/recording.wav';
 
-      if (result?.text && listenCallbackRef.current) {
-        listenCallbackRef.current(result.text.trim());
+          // Write all PCM chunks to file
+          for (let i = 0; i < pcmChunks.length; i++) {
+            if (i === 0) {
+              await RNFS.writeFile(pcmPath, pcmChunks[i], 'base64');
+            } else {
+              await RNFS.appendFile(pcmPath, pcmChunks[i], 'base64');
+            }
+          }
+
+          // Read raw PCM data
+          const pcmBase64 = await RNFS.readFile(pcmPath, 'base64');
+          const pcmBytes = atob(pcmBase64);
+          const dataLength = pcmBytes.length;
+
+          // Create WAV header (44 bytes)
+          const sampleRate = 16000;
+          const numChannels = 1;
+          const bitsPerSample = 16;
+          const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+          const blockAlign = numChannels * (bitsPerSample / 8);
+
+          const header = new ArrayBuffer(44);
+          const view = new DataView(header);
+          // RIFF
+          view.setUint32(0, 0x52494646, false); // "RIFF"
+          view.setUint32(4, 36 + dataLength, true);
+          view.setUint32(8, 0x57415645, false); // "WAVE"
+          // fmt
+          view.setUint32(12, 0x666D7420, false); // "fmt "
+          view.setUint32(16, 16, true); // chunk size
+          view.setUint16(20, 1, true); // PCM format
+          view.setUint16(22, numChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, byteRate, true);
+          view.setUint16(32, blockAlign, true);
+          view.setUint16(34, bitsPerSample, true);
+          // data
+          view.setUint32(36, 0x64617461, false); // "data"
+          view.setUint32(40, dataLength, true);
+
+          // Convert header to base64
+          const headerBytes = new Uint8Array(header);
+          let headerStr = '';
+          for (let i = 0; i < headerBytes.length; i++) {
+            headerStr += String.fromCharCode(headerBytes[i]);
+          }
+          const headerBase64 = btoa(headerStr);
+
+          // Write WAV file (header + PCM data)
+          await RNFS.writeFile(wavPath, headerBase64, 'base64');
+          await RNFS.appendFile(wavPath, pcmBase64, 'base64');
+
+          base64Audio = await RNFS.readFile(wavPath, 'base64');
+
+          // Cleanup
+          await RNFS.unlink(pcmPath).catch(() => {});
+          await RNFS.unlink(wavPath).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('LiveAudioStream stop failed:', e);
+      }
+
+      // Transcribe
+      if (base64Audio) {
+        const result = await RunAnywhere.transcribe(base64Audio, {
+          language: 'en',
+          sampleRate: 16000,
+        });
+
+        if (result?.text && listenCallbackRef.current) {
+          listenCallbackRef.current(result.text.trim());
+        }
       }
     } catch (e) {
       console.warn('Transcription failed:', e);
     }
 
+    audioChunksRef.current = [];
     listenCallbackRef.current = null;
   }, [sttReady]);
 

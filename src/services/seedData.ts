@@ -1,10 +1,18 @@
-import { insertTransactionAt } from './DatabaseService';
+import { insertTransactionAt, getAllTransactions, clearAllTransactions } from './DatabaseService';
 
 let seeded = false;
 
 export async function seedFakeData() {
   if (seeded) return;
   seeded = true;
+
+  // If there are too many transactions (duplicates from reloads), clear and re-seed
+  const existing = await getAllTransactions();
+  if (existing.length > 11) {
+    await clearAllTransactions();
+  } else if (existing.length > 0) {
+    return;
+  }
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

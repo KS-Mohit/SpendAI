@@ -54,6 +54,7 @@ export default function InsightsScreen() {
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [autoRead, setAutoRead] = useState(false);
 
   // Salary state
   const [salary, setSalary] = useState<SalaryInfo | null>(null);
@@ -76,15 +77,13 @@ export default function InsightsScreen() {
   );
 
   function buildTransactionsJson(): string {
+    // Limit to last 20 transactions to keep prompt short for on-device LLM
+    const recent = transactions.slice(0, 20);
     return JSON.stringify(
-      transactions.map((t) => ({
+      recent.map((t) => ({
         amount: t.amount,
         category: t.category,
         date: new Date(t.created_at * 1000).toLocaleDateString('en-IN'),
-        time: new Date(t.created_at * 1000).toLocaleTimeString('en', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
         note: t.note,
       }))
     );
@@ -139,8 +138,8 @@ export default function InsightsScreen() {
     setLoading(false);
     scrollToEnd();
 
-    // Auto-speak the response if TTS is available
-    if (ttsReady && responseText) {
+    // Speak response only if auto-read is enabled
+    if (autoRead && ttsReady && responseText) {
       setIsSpeaking(true);
       try {
         await speak(responseText);
@@ -159,8 +158,6 @@ export default function InsightsScreen() {
       await startListening((transcribedText: string) => {
         if (transcribedText) {
           setInput(transcribedText);
-          // Brief delay so user sees what was transcribed before sending
-          setTimeout(() => handleSend(transcribedText), 500);
         }
       });
     }
@@ -300,6 +297,18 @@ export default function InsightsScreen() {
           maxLength={500}
           editable={!loading && !isListening}
         />
+
+        {/* Auto-read toggle */}
+        {ttsReady && (
+          <TouchableOpacity
+            style={[styles.voiceBtn, autoRead && styles.voiceBtnActive]}
+            onPress={() => setAutoRead(!autoRead)}
+          >
+            <Text style={[styles.voiceBtnIcon, autoRead && styles.voiceBtnIconActive]}>
+              {autoRead ? '🔊' : '🔇'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Mic button — tap to record, tap again to stop */}
         <TouchableOpacity
