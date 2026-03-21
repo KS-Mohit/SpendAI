@@ -1,0 +1,43 @@
+{
+  "name": "spendai",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~55.0.6",
+    "@react-native-voice/voice": "^3.2.4",
+    "@react-navigation/native": "^7.1.33",
+    "@react-navigation/native-stack": "^7.14.5",
+    "@runanywhere/core": "^0.18.1",
+    "@runanywhere/llamacpp": "^0.18.1",
+    "@runanywhere/onnx": "^0.18.1",
+    "expo": "~55.0.8",
+    "expo-av": "^16.0.8",
+    "expo-notifications": "^55.0.13",
+    "expo-sqlite": "~55.0.11",
+    "expo-status-bar": "~55.0.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-fs": "^2.20.0",
+    "react-native-gesture-handler": "^2.30.0",
+    "react-native-nitro-modules": "^0.35.2",
+    "react-native-reanimated": "^3.19.5",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-screens": "^4.24.0",
+    "react-native-sms-listener": "^0.0.1",
+    "react-native-web": "^0.21.0",
+    "react-native-zip-archive": "^6.1.2",
+    "victory-native": "^41.20.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
