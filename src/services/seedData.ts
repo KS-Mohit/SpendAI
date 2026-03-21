@@ -39,7 +39,11 @@ export async function seedFakeData() {
   for (const tx of fakeTransactions) {
     const txDate = new Date(today);
     txDate.setDate(txDate.getDate() - tx.daysAgo);
-    txDate.setHours(10 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60));
+    // Fixed times per transaction (deterministic — no random)
+    const fixedHours = [10, 14, 11, 19, 9, 16, 12, 18, 20, 13, 15];
+    const fixedMins  = [30, 15, 45, 0, 20, 50, 10, 35, 5, 40, 25];
+    const idx = fakeTransactions.indexOf(tx);
+    txDate.setHours(fixedHours[idx % fixedHours.length], fixedMins[idx % fixedMins.length]);
     const createdAt = Math.floor(txDate.getTime() / 1000);
 
     await insertTransactionAt(

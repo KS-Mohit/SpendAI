@@ -149,17 +149,18 @@ export default function InsightsScreen() {
     }
   }
 
-  // ── Voice input via RunAnywhere VAD + STT ──
+  // ── Voice input: tap to start recording, tap again to stop + transcribe ──
   async function toggleVoice() {
     if (isListening) {
+      // Stop recording → transcribe → show in input → auto-send
       await stopListening();
     } else {
+      // Start recording
       await startListening((transcribedText: string) => {
         if (transcribedText) {
-          // Put transcribed text into input and auto-send
           setInput(transcribedText);
-          // Small delay so user can see what was transcribed
-          setTimeout(() => handleSend(transcribedText), 300);
+          // Brief delay so user sees what was transcribed before sending
+          setTimeout(() => handleSend(transcribedText), 500);
         }
       });
     }
@@ -289,7 +290,7 @@ export default function InsightsScreen() {
       <View style={styles.inputBar}>
         <TextInput
           style={styles.textInput}
-          placeholder={isListening ? 'Listening...' : 'Ask about your spending...'}
+          placeholder={isListening ? 'Recording... tap mic to stop' : 'Ask about your spending...'}
           placeholderTextColor={Colors.textMuted}
           value={input}
           onChangeText={setInput}
@@ -300,20 +301,22 @@ export default function InsightsScreen() {
           editable={!loading && !isListening}
         />
 
-        {/* Voice button — only shown when STT is ready */}
-        {sttReady && (
-          <TouchableOpacity
-            style={[styles.voiceBtn, isListening && styles.voiceBtnActive]}
-            onPress={toggleVoice}
-            disabled={loading}
-          >
+        {/* Mic button — tap to record, tap again to stop */}
+        <TouchableOpacity
+          style={[
+            styles.voiceBtn,
+            isListening && styles.voiceBtnActive,
+            !sttReady && styles.voiceBtnDisabled,
+          ]}
+          onPress={toggleVoice}
+          disabled={loading || !sttReady}
+        >
             <Text
               style={[styles.voiceBtnIcon, isListening && styles.voiceBtnIconActive]}
             >
-              {isListening ? '■' : '◉'}
+              {isListening ? '■' : '🎙'}
             </Text>
-          </TouchableOpacity>
-        )}
+        </TouchableOpacity>
 
         {/* Send button */}
         <TouchableOpacity
@@ -658,6 +661,9 @@ const styles = StyleSheet.create({
   voiceBtnActive: {
     backgroundColor: '#FF3B30',
     borderColor: '#FF3B30',
+  },
+  voiceBtnDisabled: {
+    opacity: 0.35,
   },
   voiceBtnIcon: {
     fontSize: 16,

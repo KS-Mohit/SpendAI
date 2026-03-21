@@ -15,19 +15,39 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.spendai.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "RECEIVE_SMS",
+        "READ_SMS",
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0A0A0A"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f585d344-85a8-4fe9-ae68-b72c754a04fd"
+      }
+    },
+    "owner": "mohit_ks"
   }
 }

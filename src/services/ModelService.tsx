@@ -38,23 +38,17 @@ const LLM_MODEL_URL =
   'https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q8_0.gguf';
 const LLM_MODEL_MEMORY = 400_000_000;
 
-const STT_MODEL_ID = 'whisper-tiny-en';
-const STT_MODEL_NAME = 'Whisper Tiny English';
+const STT_MODEL_ID = 'sherpa-onnx-whisper-tiny.en';
+const STT_MODEL_NAME = 'Sherpa Whisper Tiny (ONNX)';
 const STT_MODEL_URL =
   'https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/sherpa-onnx-whisper-tiny.en.tar.gz';
 const STT_MODEL_MEMORY = 75_000_000;
 
-const TTS_MODEL_ID = 'piper-en-lessac';
-const TTS_MODEL_NAME = 'Piper English (Lessac)';
+const TTS_MODEL_ID = 'vits-piper-en_US-lessac-medium';
+const TTS_MODEL_NAME = 'Piper TTS (US English - Medium)';
 const TTS_MODEL_URL =
   'https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/vits-piper-en_US-lessac-medium.tar.gz';
 const TTS_MODEL_MEMORY = 65_000_000;
-
-const VAD_MODEL_ID = 'silero-vad';
-const VAD_MODEL_NAME = 'Silero VAD';
-const VAD_MODEL_URL =
-  'https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/silero-vad.tar.gz';
-const VAD_MODEL_MEMORY = 5_000_000;
 
 export type ModelStatus =
   | 'uninitialized'
@@ -207,19 +201,10 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         memoryRequirement: TTS_MODEL_MEMORY,
       });
 
-      await ONNX.addModel({
-        id: VAD_MODEL_ID,
-        name: VAD_MODEL_NAME,
-        url: VAD_MODEL_URL,
-        modality: ModelCategory.Audio,
-        artifactType: ModelArtifactType.TarGzArchive,
-        memoryRequirement: VAD_MODEL_MEMORY,
-      });
-
       // ── Download all models ──
       setStatus('downloading');
 
-      const modelIds = [LLM_MODEL_ID, STT_MODEL_ID, TTS_MODEL_ID, VAD_MODEL_ID];
+      const modelIds = [LLM_MODEL_ID, STT_MODEL_ID, TTS_MODEL_ID];
       let completed = 0;
 
       for (const id of modelIds) {
@@ -263,16 +248,6 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.warn('TTS model load failed:', e);
-      }
-
-      // Load VAD (Silero)
-      try {
-        const vadInfo = await RunAnywhere.getModelInfo(VAD_MODEL_ID);
-        if (vadInfo?.localPath) {
-          await RunAnywhere.loadVADModel(vadInfo.localPath);
-        }
-      } catch (e) {
-        console.warn('VAD model load failed:', e);
       }
 
       setStatus('ready');
@@ -330,15 +305,16 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
       if (ttsReady) {
         // Use on-device Piper TTS
         const result = await RunAnywhere.synthesize(text, {
+          voice: 'default',
           rate: 1.0,
           pitch: 1.0,
           volume: 1.0,
         });
-        const wavBase64 = RunAnywhere.Audio.createWavFromPCMFloat32(
+        const wavPath = await RunAnywhere.Audio.createWavFromPCMFloat32(
           result.audio,
-          result.sampleRate
+          result.sampleRate || 22050
         );
-        await RunAnywhere.Audio.playAudio(wavBase64);
+        await RunAnywhere.Audio.playAudio(wavPath);
       } else {
         // Fallback to system TTS
         try {
@@ -360,56 +336,143 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ── VAD-based listening: start VAD, collect speech, transcribe ──
+  // ── Voice session using RunAnywhere built-in pipeline ──
+  const voiceSessionRef = useRef<any>(null);
+
   const startListening = useCallback(
     async (onResult: (text: string) => void): Promise<void> => {
       if (!RunAnywhere || !sttReady) return;
 
-      listeningRef.current = true;
-      setIsListening(true);
       listenCallbackRef.current = onResult;
 
       try {
-        // Set up VAD callback to capture speech segments
-        RunAnywhere.setVADSpeechActivityCallback(
-          async (event: { type: string; audioBuffer?: number[] }) => {
-            if (
-              event.type === 'speechEnded' &&
-              event.audioBuffer &&
-              listeningRef.current
-            ) {
-              const samples = new Float32Array(event.audioBuffer);
-              const result = await RunAnywhere.transcribeBuffer(samples, {
-                language: 'en',
-                sampleRate: 16000,
-              });
-              if (result?.text && listenCallbackRef.current) {
-                listenCallbackRef.current(result.text.trim());
+        const session = await RunAnywhere.startVoiceSession(
+          {
+            agentConfig: {
+              llmModelId: LLM_MODEL_ID,
+              sttModelId: STT_MODEL_ID,
+              ttsModelId: TTS_MODEL_ID,
+              systemPrompt: 'You are a helpful expense tracking assistant. Keep responses brief.',
+              generationOptions: {
+                maxTokens: 150,
+                temperature: 0.7,
+              },
+            },
+            enableVAD: true,
+            vadSensitivity: 0.5,
+            speechTimeout: 3000,
+          },
+          (event: any) => {
+            if (event.type === 'transcriptionComplete' && event.data?.transcript) {
+              if (listenCallbackRef.current) {
+                listenCallbackRef.current(event.data.transcript.trim());
               }
             }
           }
         );
-
-        await RunAnywhere.startVAD();
+        voiceSessionRef.current = session;
+        setIsListening(true);
       } catch (e) {
-        console.warn('VAD start failed:', e);
-        setIsListening(false);
-        listeningRef.current = false;
+        console.warn('Voice session start failed, falling back to manual recording:', e);
+        // Fallback to manual recording with expo-av
+        await startManualRecording(onResult);
       }
     },
     [sttReady]
   );
 
-  const stopListening = useCallback(async (): Promise<void> => {
-    listeningRef.current = false;
-    setIsListening(false);
-    listenCallbackRef.current = null;
+  // Fallback manual recording for when voice session is unavailable
+  const recordingRef = useRef<any>(null);
 
-    if (!RunAnywhere) return;
+  const startManualRecording = useCallback(
+    async (onResult: (text: string) => void): Promise<void> => {
+      try {
+        const { Audio } = require('expo-av');
+        const { granted } = await Audio.requestPermissionsAsync();
+        if (!granted) return;
+
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        const recording = new Audio.Recording();
+        await recording.prepareToRecordAsync({
+          android: {
+            extension: '.wav',
+            outputFormat: 2,
+            audioEncoder: 1,
+            sampleRate: 16000,
+            numberOfChannels: 1,
+            bitRate: 128000,
+          },
+          ios: {
+            extension: '.wav',
+            outputFormat: 'linearPCM' as any,
+            audioQuality: 127,
+            sampleRate: 16000,
+            numberOfChannels: 1,
+            bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+          web: {},
+        });
+        await recording.startAsync();
+        recordingRef.current = recording;
+        listenCallbackRef.current = onResult;
+        setIsListening(true);
+      } catch (e) {
+        console.warn('Manual recording failed:', e);
+        setIsListening(false);
+      }
+    },
+    []
+  );
+
+  const stopListening = useCallback(async (): Promise<void> => {
+    setIsListening(false);
+
+    // Stop voice session if active
+    if (voiceSessionRef.current) {
+      try {
+        await voiceSessionRef.current.stop();
+      } catch (e) {
+        console.warn('Voice session stop failed:', e);
+      }
+      voiceSessionRef.current = null;
+      listenCallbackRef.current = null;
+      return;
+    }
+
+    // Stop manual recording fallback
+    if (!recordingRef.current) return;
+
     try {
-      await RunAnywhere.stopVAD();
-    } catch {}
-  }, []);
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (!uri || !RunAnywhere || !sttReady) return;
+
+      const RNFS = require('react-native-fs');
+      const base64Audio = await RNFS.readFile(uri, 'base64');
+
+      const result = await RunAnywhere.transcribe(base64Audio, {
+        language: 'en',
+        sampleRate: 16000,
+      });
+
+      if (result?.text && listenCallbackRef.current) {
+        listenCallbackRef.current(result.text.trim());
+      }
+    } catch (e) {
+      console.warn('Transcription failed:', e);
+    }
+
+    listenCallbackRef.current = null;
+  }, [sttReady]);
 
   return (
     <ModelContext.Provider
