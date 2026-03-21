@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors } from '../theme/colors';
 import { fireTestSMS } from '../services/SMSService';
+import { parseSMS, ParsedTransaction } from '../services/SMSParser'; // ← new
 import { useModel } from '../services/ModelService';
 import { RootStackParamList } from '../types';
 
@@ -40,11 +41,19 @@ export default function DevScreen() {
   const navigation = useNavigation<NavProp>();
   const { status, downloadProgress, error } = useModel();
   const [customSms, setCustomSms] = useState('');
+  const [preview, setPreview] = useState<ParsedTransaction | null>(null); // ← new
 
   function handleFire(smsText: string) {
     if (!smsText.trim()) return;
     fireTestSMS(smsText);
     Alert.alert('SMS Fired', 'Test SMS sent through the pipeline.');
+  }
+
+  // ← new: parse only, don't fire pipeline
+  function handlePreview(smsText: string) {
+    if (!smsText.trim()) return;
+    const result = parseSMS(smsText);
+    setPreview(result);
   }
 
   return (
@@ -90,13 +99,23 @@ export default function DevScreen() {
           <Text style={styles.templateSms} numberOfLines={2}>
             {t.sms}
           </Text>
-          <TouchableOpacity
-            style={styles.fireBtn}
-            onPress={() => handleFire(t.sms)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.fireBtnText}>Fire SMS</Text>
-          </TouchableOpacity>
+          {/* ← new: two buttons side by side */}
+          <View style={styles.btnRow}>
+            <TouchableOpacity
+              style={styles.fireBtn}
+              onPress={() => handleFire(t.sms)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.fireBtnText}>Fire SMS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.fireBtn, styles.previewBtn]}
+              onPress={() => handlePreview(t.sms)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.fireBtnText}>Preview Parse</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ))}
 
@@ -111,13 +130,46 @@ export default function DevScreen() {
         multiline
         numberOfLines={3}
       />
-      <TouchableOpacity
-        style={[styles.fireBtn, styles.fireBtnFull]}
-        onPress={() => handleFire(customSms)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.fireBtnText}>Fire Custom SMS</Text>
-      </TouchableOpacity>
+      {/* ← new: two buttons for custom too */}
+      <View style={[styles.btnRow, { marginTop: 8 }]}>
+        <TouchableOpacity
+          style={[styles.fireBtn, styles.fireBtnFull]}
+          onPress={() => handleFire(customSms)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.fireBtnText}>Fire Custom SMS</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fireBtn, styles.fireBtnFull, styles.previewBtn]}
+          onPress={() => handlePreview(customSms)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.fireBtnText}>Preview Parse</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ← new: Parse Preview Card */}
+      {preview !== null && (
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>PARSE RESULT</Text>
+          {(
+            [
+              ['Amount',      `₹${preview.amount}`],
+              ['Type',        preview.type],
+              ['Merchant',    preview.merchant ?? '—'],
+              ['Account',     preview.accountLast4 ? `XX${preview.accountLast4}` : '—'],
+              ['Balance',     preview.balance ? `₹${preview.balance}` : '—'],
+              ['Ref / UTR',   preview.refNumber ?? '—'],
+              ['Date / Time', preview.datetime ?? '—'],
+            ] as [string, string][]
+          ).map(([label, value]) => (
+            <View key={label} style={styles.previewRow}>
+              <Text style={styles.previewLabel}>{label}</Text>
+              <Text style={styles.previewValue}>{value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -196,6 +248,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 12,
   },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   fireBtn: {
     backgroundColor: Colors.accent,
     borderRadius: 10,
@@ -205,8 +261,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fireBtnFull: {
+    flex: 1,
     alignSelf: 'stretch',
-    marginTop: 8,
+  },
+  previewBtn: {
+    backgroundColor: Colors.backgroundMuted,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   fireBtnText: {
     fontSize: 14,
@@ -222,5 +283,31 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  // ← new preview card styles
+  previewCard: {
+    backgroundColor: Colors.backgroundMuted,
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 24,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  previewLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+  },
+  previewValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: 16,
   },
 });

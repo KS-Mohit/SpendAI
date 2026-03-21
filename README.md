@@ -173,3 +173,18 @@ On web, the app uses:
 | TTS Playback | expo-av |
 | SMS | react-native-sms-listener |
 | Notifications | expo-notifications |
+
+
+## Helper guide 
+
+```
+
+Save it as `E:\HackXtreme\scripts\patch-expo-cli.js`
+
+Then also create a `README` note for teammates — add this to your `README.md` under Setup:
+```
+5. Copy .so files (required after every npm install)
+   See scripts/copy-so-files.md for instructions
+=>
+   cd E:\HackXtreme
+   powershell -ExecutionPolicy Bypass -File .\scripts\setup-native-libs.ps1
