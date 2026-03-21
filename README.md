@@ -4,21 +4,59 @@ AI-powered expense tracker that runs entirely on-device. No cloud, no backend. B
 
 ## Prerequisites
 
-- Node.js 18+
-- npm
-- [RunAnywhere AI Studio](https://runanywhere.ai) app installed on a physical Android device (for AI + SMS features)
-- Android emulator works for UI development (use DevScreen to simulate SMS)
+- **Node.js** 18+ and npm
+- **Android Studio** with an emulator (e.g. Medium Phone API 36) or a physical Android device
+- **Java JDK** — Android Studio bundles one at `C:\Program Files\Android\Android Studio\jbr`
 
 ## Setup
 
+### 1. Install dependencies
+
 ```bash
 npm install
+```
+
+### 2. Set JAVA_HOME (required every new terminal on Windows)
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+```
+
+To make it permanent, add `JAVA_HOME` to your System Environment Variables.
+
+### 3. Build and run on Android
+
+```bash
+npx expo run:android
+```
+
+First build takes ~20-30 minutes. After that, just start the dev server:
+
+```bash
 npx expo start
 ```
 
-- Press `w` for web preview (mock AI responses, no voice)
-- Press `a` for Android (requires emulator or AI Studio on physical device)
-- Scan QR code with RunAnywhere AI Studio for full AI features
+Press `a` to open on the emulator/device.
+
+### 4. Web preview (limited — no AI features)
+
+```bash
+npx expo start --web
+```
+
+Press `w` — uses mock AI responses, no voice features.
+
+### Model Downloads
+
+On first launch the app automatically downloads 3 AI models (~340 MB total):
+
+| Model | Purpose | Size |
+|-------|---------|------|
+| LFM2-350M-Q4_K_M | LLM chat & expense analysis | ~238 MB |
+| sherpa-onnx-whisper-tiny.en | Speech-to-text | ~40 MB |
+| vits-piper-en_US-lessac-medium | Text-to-speech | ~60 MB |
+
+Watch `adb logcat | grep SpendAI` for download/load progress. Models are cached after the first download.
 
 ## Project Structure
 
@@ -88,13 +126,36 @@ On web, the app uses:
 - Mock AI responses that parse transaction data directly
 - No voice features (STT/TTS require RunAnywhere native SDK)
 
+## Important Version Constraints
+
+- **`react-native-nitro-modules`** must stay at **0.31.10** — RunAnywhere 0.18.1 uses the `updateNative` API which was removed in newer versions
+- **Gradle** must be **8.13** — if `npx expo prebuild` regenerates `android/`, it resets to 9.0 which has an `IBM_SEMERU` error. Fix in `android/gradle/wrapper/gradle-wrapper.properties`:
+  ```properties
+  distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+  ```
+- **`android/local.properties`** must have your SDK path:
+  ```
+  sdk.dir=C:\\Users\\<YOUR_USERNAME>\\AppData\\Local\\Android\\Sdk
+  ```
+
 ## Constraints
 
-- `react-native-reanimated` must be `^3.x` — NOT 4.x (AI Studio compatibility)
 - All AI inference uses `RunAnywhere.generateStream()` — never external APIs
 - All data stays in on-device SQLite — no network storage
 - Parse LLM JSON responses in try/catch — always fallback to null
 - User always confirms categories — AI only pre-selects, never auto-saves
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `Gradle requires JVM 17, found JVM 8` | Set `JAVA_HOME` to Android Studio's JBR (see setup step 2) |
+| `IBM_SEMERU` error during build | Downgrade Gradle to 8.13 (see version constraints above) |
+| `SDK location not found` | Create/fix `android/local.properties` with your SDK path |
+| App crashes on launch | Must use dev client build (`npx expo run:android`), not Expo Go |
+| LLM very slow on emulator | Expected on x86_64 — use physical device or set `FORCE_MOCK_LLM = true` in `ModelService.tsx` |
+| Port 8081 in use | Kill other Metro processes or `npx expo start --port 8082` |
+| Models not downloading | Check internet; watch `adb logcat \| grep SpendAI` for progress |
 
 ## Tech Stack
 
@@ -108,5 +169,7 @@ On web, the app uses:
 | STT | Whisper Tiny (on-device, ONNX) |
 | TTS | Piper Lessac (on-device, ONNX) |
 | VAD | Silero VAD (on-device, ONNX) |
+| Voice Recording | react-native-live-audio-stream (raw PCM 16kHz) |
+| TTS Playback | expo-av |
 | SMS | react-native-sms-listener |
 | Notifications | expo-notifications |
