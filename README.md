@@ -50,11 +50,11 @@ Press `w` — uses mock AI responses, no voice features.
 
 On first launch the app automatically downloads 3 AI models (~340 MB total):
 
-| Model | Purpose | Size |
-|-------|---------|------|
-| LFM2-350M-Q4_K_M | LLM chat & expense analysis | ~238 MB |
-| sherpa-onnx-whisper-tiny.en | Speech-to-text | ~40 MB |
-| vits-piper-en_US-lessac-medium | Text-to-speech | ~60 MB |
+| Model                          | Purpose                     | Size    |
+| ------------------------------ | --------------------------- | ------- |
+| LFM2-350M-Q4_K_M               | LLM chat & expense analysis | ~238 MB |
+| sherpa-onnx-whisper-tiny.en    | Speech-to-text              | ~40 MB  |
+| vits-piper-en_US-lessac-medium | Text-to-speech              | ~60 MB  |
 
 Watch `adb logcat | grep SpendAI` for download/load progress. Models are cached after the first download.
 
@@ -73,17 +73,17 @@ App.tsx                # Entry — providers, navigation, SMS listener
 
 ## Key Files
 
-| File | What it does |
-|------|-------------|
-| `services/ModelService.tsx` | RunAnywhere SDK init, downloads + loads LLM, STT, TTS, VAD models. Exposes `generate()`, `transcribe()`, `speak()`, `startListening()` via React Context |
-| `services/DatabaseService.ts` | SQLite CRUD for transactions. In-memory fallback on web |
-| `services/SMSService.ts` | Listens for incoming SMS, extracts amounts via regex. `fireTestSMS()` for testing |
-| `services/CategoryService.ts` | Builds LLM prompts for categorization and chat |
-| `services/seedData.ts` | Populates fake transactions for development |
-| `screens/DashboardScreen.tsx` | Main screen — totals, chart, transaction list |
-| `screens/InsightsScreen.tsx` | AI chat — financial analysis, voice input/output, salary modal |
-| `screens/ConfirmTransactionScreen.tsx` | Categorize a detected transaction with AI suggestion |
-| `screens/DevScreen.tsx` | Fire test SMS templates, view model status |
+| File                                   | What it does                                                                                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `services/ModelService.tsx`            | RunAnywhere SDK init, downloads + loads LLM, STT, TTS, VAD models. Exposes `generate()`, `transcribe()`, `speak()`, `startListening()` via React Context |
+| `services/DatabaseService.ts`          | SQLite CRUD for transactions. In-memory fallback on web                                                                                                  |
+| `services/SMSService.ts`               | Listens for incoming SMS, extracts amounts via regex. `fireTestSMS()` for testing                                                                        |
+| `services/CategoryService.ts`          | Builds LLM prompts for categorization and chat                                                                                                           |
+| `services/seedData.ts`                 | Populates fake transactions for development                                                                                                              |
+| `screens/DashboardScreen.tsx`          | Main screen — totals, chart, transaction list                                                                                                            |
+| `screens/InsightsScreen.tsx`           | AI chat — financial analysis, voice input/output, salary modal                                                                                           |
+| `screens/ConfirmTransactionScreen.tsx` | Categorize a detected transaction with AI suggestion                                                                                                     |
+| `screens/DevScreen.tsx`                | Fire test SMS templates, view model status                                                                                                               |
 
 ## How to Make Changes
 
@@ -122,6 +122,7 @@ Models are registered and loaded in `ModelService.tsx`. To add a new model:
 Use the **DevScreen** (tap the gear icon on Dashboard → Dev). It has pre-filled SMS templates you can fire to test the full pipeline: SMS → amount extraction → AI categorization → confirm → save to DB.
 
 On web, the app uses:
+
 - In-memory store instead of SQLite
 - Mock AI responses that parse transaction data directly
 - No voice features (STT/TTS require RunAnywhere native SDK)
@@ -147,35 +148,34 @@ On web, the app uses:
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `Gradle requires JVM 17, found JVM 8` | Set `JAVA_HOME` to Android Studio's JBR (see setup step 2) |
-| `IBM_SEMERU` error during build | Downgrade Gradle to 8.13 (see version constraints above) |
-| `SDK location not found` | Create/fix `android/local.properties` with your SDK path |
-| App crashes on launch | Must use dev client build (`npx expo run:android`), not Expo Go |
-| LLM very slow on emulator | Expected on x86_64 — use physical device or set `FORCE_MOCK_LLM = true` in `ModelService.tsx` |
-| Port 8081 in use | Kill other Metro processes or `npx expo start --port 8082` |
-| Models not downloading | Check internet; watch `adb logcat \| grep SpendAI` for progress |
+| Problem                               | Solution                                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Gradle requires JVM 17, found JVM 8` | Set `JAVA_HOME` to Android Studio's JBR (see setup step 2)                                    |
+| `IBM_SEMERU` error during build       | Downgrade Gradle to 8.13 (see version constraints above)                                      |
+| `SDK location not found`              | Create/fix `android/local.properties` with your SDK path                                      |
+| App crashes on launch                 | Must use dev client build (`npx expo run:android`), not Expo Go                               |
+| LLM very slow on emulator             | Expected on x86_64 — use physical device or set `FORCE_MOCK_LLM = true` in `ModelService.tsx` |
+| Port 8081 in use                      | Kill other Metro processes or `npx expo start --port 8082`                                    |
+| Models not downloading                | Check internet; watch `adb logcat \| grep SpendAI` for progress                               |
 
 ## Tech Stack
 
-| Layer | Tech |
-|-------|------|
-| Framework | Expo (managed workflow) |
-| Navigation | React Navigation 7 (native stack) |
-| Database | expo-sqlite (SQLite on device) |
-| AI Runtime | RunAnywhere SDK (LlamaCPP + ONNX) |
-| LLM | LFM2-350M (on-device, GGUF) |
-| STT | Whisper Tiny (on-device, ONNX) |
-| TTS | Piper Lessac (on-device, ONNX) |
-| VAD | Silero VAD (on-device, ONNX) |
+| Layer           | Tech                                           |
+| --------------- | ---------------------------------------------- |
+| Framework       | Expo (managed workflow)                        |
+| Navigation      | React Navigation 7 (native stack)              |
+| Database        | expo-sqlite (SQLite on device)                 |
+| AI Runtime      | RunAnywhere SDK (LlamaCPP + ONNX)              |
+| LLM             | LFM2-350M (on-device, GGUF)                    |
+| STT             | Whisper Tiny (on-device, ONNX)                 |
+| TTS             | Piper Lessac (on-device, ONNX)                 |
+| VAD             | Silero VAD (on-device, ONNX)                   |
 | Voice Recording | react-native-live-audio-stream (raw PCM 16kHz) |
-| TTS Playback | expo-av |
-| SMS | react-native-sms-listener |
-| Notifications | expo-notifications |
+| TTS Playback    | expo-av                                        |
+| SMS             | react-native-sms-listener                      |
+| Notifications   | expo-notifications                             |
 
-
-## Helper guide 
+## Helper guide -- Azur3-ing
 
 ```
 
@@ -183,8 +183,9 @@ Save it as `E:\HackXtreme\scripts\patch-expo-cli.js`
 
 Then also create a `README` note for teammates — add this to your `README.md` under Setup:
 ```
+
 5. Copy .so files (required after every npm install)
    See scripts/copy-so-files.md for instructions
-=>
+   =>
    cd E:\HackXtreme
    powershell -ExecutionPolicy Bypass -File .\scripts\setup-native-libs.ps1
