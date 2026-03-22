@@ -18,6 +18,7 @@ import { ColorScheme } from '../theme/colors';
 import { useModel } from '../services/ModelService';
 import { getTransactionsInRange, Transaction } from '../services/DatabaseService';
 import { buildChatPrompt } from '../services/CategoryService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ChatMessage {
   id: string;
@@ -305,9 +306,11 @@ export default function InsightsScreen() {
             style={[styles.voiceBtn, autoRead && styles.voiceBtnActive]}
             onPress={() => setAutoRead(!autoRead)}
           >
-            <Text style={[styles.voiceBtnIcon, autoRead && styles.voiceBtnIconActive]}>
-              {autoRead ? '\ud83d\udd0a' : '\ud83d\udd07'}
-            </Text>
+            <MaterialCommunityIcons
+              name={autoRead ? 'volume-high' : 'volume-off'}
+              size={18}
+              color={autoRead ? colors.onPrimary : colors.onSurfaceVariant}
+            />
           </TouchableOpacity>
         )}
 
@@ -320,11 +323,11 @@ export default function InsightsScreen() {
           onPress={toggleVoice}
           disabled={loading || !sttReady}
         >
-            <Text
-              style={[styles.voiceBtnIcon, isListening && styles.voiceBtnIconActive]}
-            >
-              {isListening ? '\u25a0' : '\ud83c\udf99'}
-            </Text>
+            <MaterialCommunityIcons
+              name={isListening ? 'stop' : 'microphone'}
+              size={18}
+              color={isListening ? colors.onPrimary : colors.onSurfaceVariant}
+            />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -673,14 +676,6 @@ function createStyles(c: ColorScheme) {
     },
     voiceBtnDisabled: {
       opacity: 0.35,
-    },
-    voiceBtnIcon: {
-      fontSize: 16,
-      color: c.onSurfaceVariant,
-    },
-    voiceBtnIconActive: {
-      color: c.onPrimary,
-      fontSize: 12,
     },
     sendBtn: {
       width: 40,
