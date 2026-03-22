@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,14 @@ import {
   Platform,
   Modal,
   Keyboard,
+  Animated,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
 import { useModel } from '../services/ModelService';
 import { getTransactionsInRange, Transaction } from '../services/DatabaseService';
-import { buildChatPrompt } from '../services/CategoryService';
+import { buildChatPrompt, tryDirectAnswer } from '../services/CategoryService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ChatMessage {
@@ -35,8 +36,11 @@ interface SalaryInfo {
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  text: "Hi! I'm your personal finance assistant \u2014 running entirely on your device.\n\nI can analyze your spending, spot patterns, and help you optimize. Try:\n\n\u2022 \"How much did I spend on food?\"\n\u2022 \"What's my biggest expense category?\"\n\u2022 \"How can I cut spending?\"\n\u2022 \"Any late-night spending habits?\"\n\nTap the income button to add your salary for deeper insights. Use the mic to speak your questions.",
+  text: "Hi! I'm your personal finance assistant \u2014 running entirely on your device.\n\nI can analyze your spending, spot patterns, and help you optimize. Try:\n\n\u2022 \"How much did I spend on food?\"\n\u2022 \"What's my biggest expense category?\"\n\u2022 \"How can I cut spending?\"\n\u2022 \"Any late-night spending habits?\"\n\nTap the income button to add your salary for deeper insights.",
 };
+
+// Audio visualizer bar count
+const BAR_COUNT = 24;
 
 export default function InsightsScreen() {
   const {
@@ -56,8 +60,6 @@ export default function InsightsScreen() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [autoRead, setAutoRead] = useState(false);
 
   // Salary state
   const [salary, setSalary] = useState<SalaryInfo | null>(null);
@@ -66,13 +68,22 @@ export default function InsightsScreen() {
   const [salaryPeriod, setSalaryPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [salaryCurrency, setSalaryCurrency] = useState('\u20b9');
 
+  // Voice mode state
+  const [showVoiceMode, setShowVoiceMode] = useState(false);
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
+
+  // Visualizer animation
+  const barAnims = useRef(
+    Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.15))
+  ).current;
+  const animLoopRef = useRef<number | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useFocusEffect(
     useCallback(() => {
       async function load() {
-        // Only load current month's transactions to keep prompt small for on-device LLM
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const start = Math.floor(startOfMonth.getTime() / 1000);
@@ -98,6 +109,49 @@ export default function InsightsScreen() {
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   }
 
+  // ── Visualizer animation ──
+  function startVisualizerAnim(intensity: 'low' | 'high') {
+    stopVisualizerAnim();
+    const animate = () => {
+      const animations = barAnims.map((anim) => {
+        const maxHeight = intensity === 'high' ? 0.5 + Math.random() * 0.5 : 0.1 + Math.random() * 0.35;
+        return Animated.timing(anim, {
+          toValue: maxHeight,
+          duration: 80 + Math.random() * 120,
+          useNativeDriver: false,
+        });
+      });
+      Animated.parallel(animations).start(() => {
+        animLoopRef.current = requestAnimationFrame(animate);
+      });
+    };
+    animate();
+  }
+
+  function stopVisualizerAnim() {
+    if (animLoopRef.current) {
+      cancelAnimationFrame(animLoopRef.current);
+      animLoopRef.current = null;
+    }
+    barAnims.forEach((anim) => {
+      Animated.timing(anim, {
+        toValue: 0.15,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    });
+  }
+
+  useEffect(() => {
+    if (voiceState === 'listening') {
+      startVisualizerAnim('high');
+    } else {
+      stopVisualizerAnim();
+    }
+    return () => stopVisualizerAnim();
+  }, [voiceState]);
+
+  // ── Text chat send ──
   async function handleSend(textOverride?: string) {
     const text = (textOverride ?? input).trim();
     if (!text || loading) return;
@@ -114,25 +168,7 @@ export default function InsightsScreen() {
     setLoading(true);
     scrollToEnd();
 
-    let responseText = '';
-
-    if (status !== 'ready') {
-      responseText =
-        'AI model is not loaded yet. Please wait for the model to finish loading and try again.';
-    } else if (transactions.length === 0) {
-      responseText =
-        "You don't have any transactions recorded yet. Add some transactions first, then I can help analyze your spending.";
-    } else {
-      try {
-        const prompt = buildChatPrompt(buildTransactionsJson(), text, salary);
-        responseText = (await generate(prompt, 150)).trim();
-        if (!responseText) {
-          responseText = "I couldn't generate a response. Try rephrasing your question.";
-        }
-      } catch {
-        responseText = 'Something went wrong. Please try again.';
-      }
-    }
+    const responseText = await getAIResponse(text);
 
     const assistantMsg: ChatMessage = {
       id: (Date.now() + 1).toString(),
@@ -142,32 +178,119 @@ export default function InsightsScreen() {
     setMessages((prev) => [...prev, assistantMsg]);
     setLoading(false);
     scrollToEnd();
+  }
 
-    if (autoRead && ttsReady && responseText) {
-      setIsSpeaking(true);
-      try {
-        await speak(responseText);
-      } catch {}
-      setIsSpeaking(false);
+  // ── Shared AI response logic ──
+  async function getAIResponse(text: string): Promise<string> {
+    console.log('[AI] getAIResponse called with:', JSON.stringify(text));
+    console.log('[AI] transactions count:', transactions.length);
+
+    if (transactions.length === 0) {
+      console.log('[AI] No transactions, returning early');
+      return "You don't have any transactions recorded yet. Add some transactions first, then I can help analyze your spending.";
+    }
+
+    const txJson = buildTransactionsJson();
+    console.log('[AI] txJson length:', txJson.length);
+
+    // Tier 1: Pre-computed data answers (instant + accurate)
+    const directAnswer = tryDirectAnswer(txJson, text, salary);
+    console.log('[AI] Tier 1 directAnswer:', directAnswer ? 'MATCHED' : 'null');
+    if (directAnswer) {
+      console.log('[AI] Tier 1 response:', directAnswer.substring(0, 100));
+      await new Promise((r) => setTimeout(r, 2000 + Math.random() * 1500));
+      return directAnswer;
+    }
+
+    // Tier 2: RAG + LLM for advice/complex questions
+    console.log('[AI] Tier 2: falling through to RAG + LLM');
+    console.log('[AI] Model status:', status);
+    if (status !== 'ready') {
+      return 'AI model is not loaded yet. Please wait for the model to finish loading and try again.';
+    }
+    try {
+      const prompt = buildChatPrompt(txJson, text, salary);
+      console.log('[AI] Prompt length:', prompt.length);
+      console.log('[AI] Prompt:', prompt.substring(0, 300));
+      const result = (await generate(prompt, 150)).trim();
+      console.log('[AI] LLM raw result:', JSON.stringify(result));
+      return result || "I couldn't generate a response. Try rephrasing your question.";
+    } catch (e: any) {
+      console.error('[AI] LLM error:', e?.message || e);
+      return 'Something went wrong. Please try again.';
     }
   }
 
-  async function toggleVoice() {
-    if (isListening) {
-      await stopListening();
-    } else {
-      await startListening((transcribedText: string) => {
-        if (transcribedText) {
-          setInput(transcribedText);
-        }
-      });
-    }
+  // ── Voice mode ──
+  const voiceActiveRef = useRef(false);
+  const [voiceInput, setVoiceInput] = useState('');
+  const [voiceMessages, setVoiceMessages] = useState<ChatMessage[]>([]);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const voiceFlatListRef = useRef<FlatList>(null);
+
+  function scrollVoiceToEnd() {
+    setTimeout(() => voiceFlatListRef.current?.scrollToEnd({ animated: true }), 100);
   }
 
-  async function toggleSpeaker() {
-    if (isSpeaking) {
-      await stopSpeaking();
-      setIsSpeaking(false);
+  function beginListening() {
+    setVoiceState('listening');
+    console.log('[VOICE] Starting listening...');
+    startListening((transcription: string) => {
+      console.log('[VOICE] Transcription:', JSON.stringify(transcription));
+      setVoiceState('idle');
+      if (transcription) {
+        setVoiceInput(transcription);
+      }
+    });
+  }
+
+  async function handleVoiceSend() {
+    const text = voiceInput.trim();
+    if (!text || voiceLoading) return;
+
+    // Show user message
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', text };
+    setVoiceMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
+    setVoiceInput('');
+    setVoiceLoading(true);
+    scrollVoiceToEnd();
+
+    // Get response using tier1/tier2
+    const answer = await getAIResponse(text);
+
+    const assistantMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'assistant', text: answer };
+    setVoiceMessages((prev) => [...prev, assistantMsg]);
+    setMessages((prev) => [...prev, assistantMsg]);
+    setVoiceLoading(false);
+    scrollVoiceToEnd();
+  }
+
+  function openVoiceMode() {
+    setShowVoiceMode(true);
+    setVoiceState('idle');
+    setVoiceInput('');
+    setVoiceMessages([]);
+    voiceActiveRef.current = true;
+    beginListening();
+  }
+
+  function closeVoiceMode() {
+    setShowVoiceMode(false);
+    voiceActiveRef.current = false;
+    setVoiceState('idle');
+    setVoiceLoading(false);
+    stopListening();
+  }
+
+  function handleVoiceTap() {
+    console.log('[VOICE] Tap, state:', voiceState);
+    if (voiceState === 'listening') {
+      // Stop recording → transcribes → shows in input for review
+      setVoiceState('thinking');
+      stopListening();
+    } else if (voiceState === 'idle') {
+      beginListening();
     }
   }
 
@@ -214,6 +337,15 @@ export default function InsightsScreen() {
     );
   }
 
+  const voiceStateLabel =
+    voiceState === 'listening' ? 'Listening — tap to stop' :
+    voiceState === 'thinking' ? 'Transcribing...' :
+    'Tap mic to start';
+
+  const voiceStateColor =
+    voiceState === 'listening' ? colors.error :
+    colors.onSurfaceVariant;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -232,24 +364,23 @@ export default function InsightsScreen() {
           </Text>
         </View>
         <View style={styles.headerRight}>
-          {isSpeaking && (
-            <TouchableOpacity style={styles.stopSpeakBtn} onPress={toggleSpeaker}>
-              <Text style={styles.stopSpeakText}>{'\u25a0'}</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
-            style={[styles.salaryBtn, salary && styles.salaryBtnActive]}
+            style={[styles.headerBtn, (!sttReady || !ttsReady) && styles.headerBtnDisabled]}
+            onPress={openVoiceMode}
+            disabled={!sttReady || !ttsReady}
+          >
+            <MaterialCommunityIcons name="microphone" size={16} color={colors.onSurfaceVariant} />
+            <Text style={styles.headerBtnLabel}>Voice</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerBtn, salary && styles.headerBtnActive]}
             onPress={() => setShowSalaryModal(true)}
           >
-            <Text
-              style={[styles.salaryBtnText, salary && styles.salaryBtnTextActive]}
-            >
+            <Text style={[styles.headerBtnText, salary && styles.headerBtnTextActive]}>
               {salary ? salary.currency : '+'}
             </Text>
-            <Text
-              style={[styles.salaryBtnLabel, salary && styles.salaryBtnLabelActive]}
-            >
-              {salary ? 'Income' : 'Income'}
+            <Text style={[styles.headerBtnLabel, salary && styles.headerBtnLabelActive]}>
+              Income
             </Text>
           </TouchableOpacity>
         </View>
@@ -268,29 +399,24 @@ export default function InsightsScreen() {
         }
       />
 
-      {/* Typing / Listening indicator */}
-      {(loading || isListening) && (
+      {/* Typing indicator */}
+      {loading && (
         <View style={styles.typingRow}>
           <View style={styles.aiAvatar}>
-            <Text style={styles.aiAvatarText}>{isListening ? '\u25cf' : 'AI'}</Text>
+            <Text style={styles.aiAvatarText}>AI</Text>
           </View>
-          <View style={[styles.typingDots, isListening && styles.listeningDots]}>
-            <ActivityIndicator
-              size="small"
-              color={isListening ? colors.error : colors.primary}
-            />
-            <Text style={[styles.typingText, isListening && styles.listeningText]}>
-              {isListening ? 'Listening...' : 'Thinking...'}
-            </Text>
+          <View style={styles.typingDots}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.typingText}>Thinking...</Text>
           </View>
         </View>
       )}
 
-      {/* Input bar */}
+      {/* Input bar — text only */}
       <View style={styles.inputBar}>
         <TextInput
           style={styles.textInput}
-          placeholder={isListening ? 'Recording... tap mic to stop' : 'Ask about your spending...'}
+          placeholder="Ask about your spending..."
           placeholderTextColor={colors.outlineVariant}
           value={input}
           onChangeText={setInput}
@@ -298,48 +424,166 @@ export default function InsightsScreen() {
           onSubmitEditing={() => handleSend()}
           multiline
           maxLength={500}
-          editable={!loading && !isListening}
+          editable={!loading}
         />
-
-        {ttsReady && (
-          <TouchableOpacity
-            style={[styles.voiceBtn, autoRead && styles.voiceBtnActive]}
-            onPress={() => setAutoRead(!autoRead)}
-          >
-            <MaterialCommunityIcons
-              name={autoRead ? 'volume-high' : 'volume-off'}
-              size={18}
-              color={autoRead ? colors.onPrimary : colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.voiceBtn,
-            isListening && styles.voiceBtnListening,
-            !sttReady && styles.voiceBtnDisabled,
-          ]}
-          onPress={toggleVoice}
-          disabled={loading || !sttReady}
-        >
-            <MaterialCommunityIcons
-              name={isListening ? 'stop' : 'microphone'}
-              size={18}
-              color={isListening ? colors.onPrimary : colors.onSurfaceVariant}
-            />
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
           onPress={() => handleSend()}
           disabled={!input.trim() || loading}
         >
-          <Text style={styles.sendBtnText}>{'\u2191'}</Text>
+          <MaterialCommunityIcons name="arrow-up" size={20} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
 
-      {/* Salary Modal */}
+      {/* ── Voice Mode Modal ── */}
+      <Modal
+        visible={showVoiceMode}
+        animationType="slide"
+        onRequestClose={closeVoiceMode}
+      >
+        <View style={[styles.voiceContainer, { backgroundColor: colors.background }]}>
+          {/* Voice header */}
+          <View style={styles.voiceHeader}>
+            <TouchableOpacity onPress={closeVoiceMode} style={styles.voiceCloseBtn}>
+              <MaterialCommunityIcons name="chevron-down" size={28} color={colors.onSurface} />
+            </TouchableOpacity>
+            <Text style={styles.voiceTitle}>Voice Mode</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {/* Visualizer */}
+          <View style={styles.visualizerSection}>
+            <Text style={[styles.voiceStateLabel, { color: voiceStateColor }]}>
+              {voiceStateLabel}
+            </Text>
+            <View style={styles.visualizerContainer}>
+              {barAnims.map((anim, i) => (
+                <Animated.View
+                  key={i}
+                  style={[
+                    styles.visualizerBar,
+                    {
+                      backgroundColor: voiceState === 'listening' ? colors.error : colors.outlineVariant,
+                      height: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [4, 60],
+                      }),
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Mic button */}
+            <TouchableOpacity
+              style={[
+                styles.voiceMicBtn,
+                voiceState === 'listening' && { backgroundColor: colors.error },
+                voiceState === 'thinking' && { opacity: 0.5 },
+              ]}
+              onPress={handleVoiceTap}
+              disabled={voiceState === 'thinking'}
+              activeOpacity={0.7}
+            >
+              {voiceState === 'thinking' ? (
+                <ActivityIndicator size="large" color={colors.primary} />
+              ) : (
+                <MaterialCommunityIcons
+                  name={voiceState === 'listening' ? 'stop' : 'microphone'}
+                  size={32}
+                  color={colors.onPrimary}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Conversation */}
+          <View style={styles.voiceTranscriptSection}>
+            {voiceMessages.length === 0 && voiceState !== 'thinking' ? (
+              <View style={styles.voiceEmptyState}>
+                <MaterialCommunityIcons name="microphone-outline" size={32} color={colors.outlineVariant} />
+                <Text style={styles.voiceEmptyText}>
+                  {voiceState === 'listening'
+                    ? 'Speak your question, then tap stop'
+                    : 'Tap mic and ask a question about your spending'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                ref={voiceFlatListRef}
+                data={voiceMessages}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => {
+                  if (item.role === 'user') {
+                    return (
+                      <View style={styles.userBubble}>
+                        <Text style={styles.userText}>{item.text}</Text>
+                      </View>
+                    );
+                  }
+                  return (
+                    <View style={styles.aiBubble}>
+                      <View style={styles.aiAvatar}>
+                        <Text style={styles.aiAvatarText}>AI</Text>
+                      </View>
+                      <View style={styles.aiContent}>
+                        <Text style={styles.aiText}>{item.text}</Text>
+                      </View>
+                    </View>
+                  );
+                }}
+                contentContainerStyle={styles.chatContent}
+                showsVerticalScrollIndicator={false}
+                onContentSizeChange={() => voiceFlatListRef.current?.scrollToEnd({ animated: true })}
+              />
+            )}
+            {voiceState === 'thinking' && (
+              <View style={styles.voiceThinkingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.voiceThinkingText}>Transcribing...</Text>
+              </View>
+            )}
+            {voiceLoading && (
+              <View style={styles.voiceThinkingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.voiceThinkingText}>Thinking...</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Voice input bar */}
+          <View style={[styles.inputBar, { borderTopColor: colors.outlineVariant }]}>
+            <TouchableOpacity
+              style={[styles.voiceMicSmall, voiceState === 'listening' && { backgroundColor: colors.error }]}
+              onPress={handleVoiceTap}
+              disabled={voiceState === 'thinking'}
+            >
+              <MaterialCommunityIcons
+                name={voiceState === 'listening' ? 'stop' : 'microphone'}
+                size={20}
+                color={colors.onPrimary}
+              />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.textInput}
+              value={voiceInput}
+              onChangeText={setVoiceInput}
+              placeholder="Edit or type your question..."
+              placeholderTextColor={colors.onSurfaceVariant}
+              editable={voiceState !== 'listening' && voiceState !== 'thinking'}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, (!voiceInput.trim() || voiceLoading) && { opacity: 0.4 }]}
+              onPress={handleVoiceSend}
+              disabled={!voiceInput.trim() || voiceLoading}
+            >
+              <MaterialCommunityIcons name="send" size={20} color={colors.onPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Salary Modal ── */}
       <Modal
         visible={showSalaryModal}
         animationType="slide"
@@ -498,19 +742,7 @@ function createStyles(c: ColorScheme) {
       alignItems: 'center',
       gap: 10,
     },
-    stopSpeakBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: c.surfaceContainerLow,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    stopSpeakText: {
-      fontSize: 12,
-      color: c.onSurface,
-    },
-    salaryBtn: {
+    headerBtn: {
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,
@@ -520,23 +752,26 @@ function createStyles(c: ColorScheme) {
       flexDirection: 'row',
       gap: 6,
     },
-    salaryBtnActive: {
+    headerBtnActive: {
       backgroundColor: c.primary,
     },
-    salaryBtnText: {
+    headerBtnDisabled: {
+      opacity: 0.35,
+    },
+    headerBtnText: {
       fontSize: 14,
       fontWeight: '700',
       color: c.onSurface,
     },
-    salaryBtnTextActive: {
+    headerBtnTextActive: {
       color: c.onPrimary,
     },
-    salaryBtnLabel: {
+    headerBtnLabel: {
       fontSize: 11,
       fontWeight: '600',
       color: c.onSurfaceVariant,
     },
-    salaryBtnLabelActive: {
+    headerBtnLabelActive: {
       color: c.onPrimary,
     },
 
@@ -609,7 +844,7 @@ function createStyles(c: ColorScheme) {
       fontWeight: '500',
     },
 
-    // Typing / Listening
+    // Typing
     typingRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -625,15 +860,9 @@ function createStyles(c: ColorScheme) {
       paddingHorizontal: 14,
       paddingVertical: 8,
     },
-    listeningDots: {
-      backgroundColor: c.errorContainer,
-    },
     typingText: {
       fontSize: 13,
       color: c.onSurfaceVariant,
-    },
-    listeningText: {
-      color: c.error,
     },
 
     // Input bar
@@ -660,23 +889,6 @@ function createStyles(c: ColorScheme) {
       maxHeight: 100,
       minHeight: 40,
     },
-    voiceBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: c.surfaceContainerLow,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    voiceBtnActive: {
-      backgroundColor: c.primaryContainer,
-    },
-    voiceBtnListening: {
-      backgroundColor: c.error,
-    },
-    voiceBtnDisabled: {
-      opacity: 0.35,
-    },
     sendBtn: {
       width: 40,
       height: 40,
@@ -688,14 +900,137 @@ function createStyles(c: ColorScheme) {
     sendBtnDisabled: {
       opacity: 0.3,
     },
-    sendBtnText: {
+
+    // ── Voice Mode ──
+    voiceContainer: {
+      flex: 1,
+    },
+    voiceHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingTop: Platform.OS === 'ios' ? 56 : 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.surfaceContainerHigh,
+    },
+    voiceCloseBtn: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    voiceTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: c.onPrimary,
-      marginTop: -1,
+      color: c.onSurface,
     },
 
-    // Modal
+    visualizerSection: {
+      alignItems: 'center',
+      paddingVertical: 32,
+      gap: 24,
+    },
+    voiceStateLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+    },
+    visualizerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 64,
+      gap: 3,
+      paddingHorizontal: 32,
+    },
+    visualizerBar: {
+      width: 3,
+      borderRadius: 2,
+    },
+    voiceMicBtn: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    voiceMicSmall: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // Voice transcript
+    voiceTranscriptSection: {
+      flex: 1,
+      borderTopWidth: 1,
+      borderTopColor: c.surfaceContainerHigh,
+    },
+    voiceTranscriptTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.onSurfaceVariant,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+    },
+    voiceTranscriptList: {
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+    },
+    voiceMsgRow: {
+      marginBottom: 16,
+    },
+    voiceMsgRowUser: {},
+    voiceMsgLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    voiceMsgText: {
+      fontSize: 15,
+      color: c.onSurfaceVariant,
+      lineHeight: 22,
+    },
+    voiceEmptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      paddingBottom: 40,
+    },
+    voiceEmptyText: {
+      fontSize: 14,
+      color: c.outlineVariant,
+      textAlign: 'center',
+    },
+    voiceThinkingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+    },
+    voiceThinkingText: {
+      fontSize: 13,
+      color: c.onSurfaceVariant,
+    },
+
+    // Salary Modal
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.4)',

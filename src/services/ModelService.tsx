@@ -61,6 +61,12 @@ export type ModelStatus =
   | 'ready'
   | 'error';
 
+export interface VoiceSessionCallbacks {
+  onTranscription: (text: string) => void;
+  onResponse: (text: string) => void;
+  onStateChange: (state: 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'idle' | 'error') => void;
+}
+
 interface ModelContextValue {
   status: ModelStatus;
   downloadProgress: number;
@@ -75,6 +81,9 @@ interface ModelContextValue {
   startListening: (onResult: (text: string) => void) => Promise<void>;
   stopListening: () => Promise<void>;
   isListening: boolean;
+  startVoiceSession: (systemPrompt: string, callbacks: VoiceSessionCallbacks) => Promise<void>;
+  stopVoiceSession: () => Promise<void>;
+  sendVoiceNow: () => Promise<void>;
 }
 
 const ModelContext = createContext<ModelContextValue>({
@@ -91,6 +100,9 @@ const ModelContext = createContext<ModelContextValue>({
   startListening: async () => {},
   stopListening: async () => {},
   isListening: false,
+  startVoiceSession: async () => {},
+  stopVoiceSession: async () => {},
+  sendVoiceNow: async () => {},
 });
 
 export function useModel() {
@@ -306,15 +318,22 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         return webMockGenerate(prompt);
       }
 
+      console.log('[LLM] generateStream called, maxTokens:', maxTokens, 'prompt length:', prompt.length);
+      const startTime = Date.now();
       const streamResult = await RunAnywhere.generateStream(prompt, {
         maxTokens,
         temperature: 0.3,
       });
 
       let response = '';
+      let tokenCount = 0;
       for await (const token of streamResult.stream) {
         response += token;
+        tokenCount++;
       }
+      const elapsed = Date.now() - startTime;
+      console.log('[LLM] Generation done:', tokenCount, 'tokens in', elapsed, 'ms');
+      console.log('[LLM] Response:', JSON.stringify(response.substring(0, 200)));
       return response || webMockGenerate(prompt);
     },
     [status]
@@ -334,48 +353,65 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ── TTS speak ──
+  const soundRef = useRef<any>(null);
+
   const speak = useCallback(
     async (text: string): Promise<void> => {
       if (!RunAnywhere) return;
 
       if (ttsReady) {
-        // Use on-device Piper TTS
+        console.log('[TTS] Synthesizing:', text.substring(0, 60));
         const result = await RunAnywhere.synthesize(text, {
           voice: 'default',
           rate: 1.0,
           pitch: 1.0,
           volume: 1.0,
         });
+        console.log('[TTS] Synthesis done, creating WAV...');
         const wavPath = await RunAnywhere.Audio.createWavFromPCMFloat32(
           result.audio,
           result.sampleRate || 22050
         );
-        // Play using expo-av since react-native-sound is not installed
+        console.log('[TTS] WAV created:', wavPath);
+
+        // Play using expo-av and wait for completion
         const { Audio } = require('expo-av');
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+        const fileUri = wavPath.startsWith('file://') ? wavPath : `file://${wavPath}`;
+        console.log('[TTS] Playing URI:', fileUri);
         const { sound } = await Audio.Sound.createAsync(
-          { uri: wavPath },
-          { shouldPlay: true }
+          { uri: fileUri },
+          { shouldPlay: true, volume: 1.0 }
         );
         soundRef.current = sound;
-        sound.setOnPlaybackStatusUpdate((s: any) => {
-          if (s.didJustFinish) {
-            sound.unloadAsync();
-            soundRef.current = null;
-          }
+        console.log('[TTS] Playback started');
+
+        // Wait for playback to finish before returning
+        await new Promise<void>((resolve) => {
+          sound.setOnPlaybackStatusUpdate((s: any) => {
+            if (s.didJustFinish) {
+              console.log('[TTS] Playback finished');
+              sound.unloadAsync();
+              soundRef.current = null;
+              resolve();
+            }
+          });
         });
       } else {
         // Fallback to system TTS
+        console.log('[TTS] Using system fallback');
         try {
           await RunAnywhere.speak(text, { rate: 1.0, pitch: 1.0, volume: 1.0 });
         } catch {
-          console.warn('TTS not available');
+          console.warn('[TTS] System TTS not available');
         }
       }
     },
     [ttsReady]
   );
-
-  const soundRef = useRef<any>(null);
 
   const stopSpeaking = useCallback(async (): Promise<void> => {
     if (soundRef.current) {
@@ -398,6 +434,19 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
       audioChunksRef.current = [];
 
       try {
+        // Ensure mic permission (may have been cleared by pm clear)
+        const { PermissionsAndroid, Platform: P } = require('react-native');
+        if (P.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn('[STT] Microphone permission denied');
+            listenCallbackRef.current = null;
+            return;
+          }
+        }
+
         const LiveAudioStream = require('react-native-live-audio-stream').default;
 
         LiveAudioStream.init({
@@ -451,8 +500,8 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
           audioChunksRef.current = []; // mark as expo-av mode
           (audioChunksRef as any)._expoRecording = recording;
           setIsListening(true);
-        } catch (e2) {
-          console.warn('All recording methods failed:', e2);
+        } catch (e2: any) {
+          console.warn('All recording methods failed:', e2?.message || e2);
           setIsListening(false);
         }
       }
@@ -461,9 +510,11 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
   );
 
   const stopListening = useCallback(async (): Promise<void> => {
+    console.log('[STT] stopListening called');
     setIsListening(false);
 
     if (!RunAnywhere || !sttReady) {
+      console.log('[STT] RunAnywhere or STT not ready, aborting');
       listenCallbackRef.current = null;
       return;
     }
@@ -475,13 +526,14 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
       try {
         const LiveAudioStream = require('react-native-live-audio-stream').default;
         LiveAudioStream.stop();
+        console.log('[STT] LiveAudioStream stopped, chunks:', audioChunksRef.current.length);
 
         if (audioChunksRef.current.length > 0) {
-          // Combine PCM chunks and create a WAV with proper header
           const pcmChunks = audioChunksRef.current;
           const totalBytes = pcmChunks.reduce((sum, chunk) => {
-            return sum + Math.ceil((chunk.length * 3) / 4); // base64 → bytes estimate
+            return sum + Math.ceil((chunk.length * 3) / 4);
           }, 0);
+          console.log('[STT] Total audio bytes (est):', totalBytes, '(~', (totalBytes / 16000 / 2).toFixed(1), 'sec)');
 
           // Write PCM data to a temp file, then create WAV
           const RNFS = require('react-native-fs');
@@ -552,22 +604,145 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
 
       // Transcribe
       if (base64Audio) {
+        console.log('[STT] Sending to transcribe, audio base64 length:', base64Audio.length);
         const result = await RunAnywhere.transcribe(base64Audio, {
           language: 'en',
           sampleRate: 16000,
         });
+        console.log('[STT] Transcribe result:', JSON.stringify(result));
 
         if (result?.text && listenCallbackRef.current) {
-          listenCallbackRef.current(result.text.trim());
+          const trimmed = result.text.trim();
+          console.log('[STT] Final transcription:', JSON.stringify(trimmed));
+          listenCallbackRef.current(trimmed);
+        } else {
+          console.log('[STT] No text in result or no callback');
+          if (listenCallbackRef.current) listenCallbackRef.current('');
         }
+      } else {
+        console.log('[STT] No audio data captured');
+        if (listenCallbackRef.current) listenCallbackRef.current('');
       }
-    } catch (e) {
-      console.warn('Transcription failed:', e);
+    } catch (e: any) {
+      console.error('[STT] Transcription failed:', e?.message || e);
+      if (listenCallbackRef.current) listenCallbackRef.current('');
     }
 
     audioChunksRef.current = [];
     listenCallbackRef.current = null;
   }, [sttReady]);
+
+  // ── Voice Session (RunAnywhere managed pipeline) ──
+  const voiceSessionRef = useRef<any>(null);
+  const voiceCallbacksRef = useRef<VoiceSessionCallbacks | null>(null);
+
+  const startVoiceSession = useCallback(
+    async (systemPrompt: string, callbacks: VoiceSessionCallbacks): Promise<void> => {
+      if (!RunAnywhere || status !== 'ready') {
+        console.warn('[VSESSION] RunAnywhere not ready');
+        return;
+      }
+
+      voiceCallbacksRef.current = callbacks;
+
+      try {
+        console.log('[VSESSION] Starting voice session...');
+        const session = await RunAnywhere.startVoiceSession({
+          systemPrompt,
+          silenceDuration: 1.5,
+          speechThreshold: 0.1,
+          autoPlayTTS: false,
+          continuousMode: true,
+          language: 'en',
+          onEvent: (event: any) => {
+            const cb = voiceCallbacksRef.current;
+            if (!cb) return;
+
+            // Don't log high-frequency audio level events
+            if (event.type !== 'listening') {
+              console.log('[VSESSION] Event:', event.type,
+                event.transcription ? `t:"${event.transcription.substring(0, 50)}"` : '',
+                event.response ? `r:"${event.response.substring(0, 50)}"` : '',
+                event.error ? `err:${event.error}` : '');
+            }
+
+            switch (event.type) {
+              case 'started':
+                cb.onStateChange('listening');
+                break;
+              case 'listening':
+                // High-frequency audio level event (20x/sec) — don't trigger state changes
+                // Could be used for audio visualizer via a separate callback if needed
+                break;
+              case 'speechStarted':
+                cb.onStateChange('listening');
+                break;
+              case 'speechEnded':
+              case 'processing':
+                cb.onStateChange('transcribing');
+                break;
+              case 'transcribed':
+                if (event.transcription) {
+                  cb.onTranscription(event.transcription);
+                }
+                cb.onStateChange('thinking');
+                break;
+              case 'responded':
+                if (event.response) {
+                  cb.onResponse(event.response);
+                }
+                break;
+              case 'speaking':
+                cb.onStateChange('speaking');
+                break;
+              case 'turnCompleted':
+                cb.onStateChange('idle');
+                break;
+              case 'stopped':
+                cb.onStateChange('idle');
+                break;
+              case 'error':
+                console.error('[VSESSION] Error:', event.error);
+                cb.onStateChange('error');
+                break;
+            }
+          },
+        });
+        voiceSessionRef.current = session;
+        console.log('[VSESSION] Voice session started');
+      } catch (e: any) {
+        console.error('[VSESSION] Failed to start:', e?.message || e);
+        callbacks.onStateChange('error');
+      }
+    },
+    [status]
+  );
+
+  const stopVoiceSession = useCallback(async (): Promise<void> => {
+    if (voiceSessionRef.current) {
+      try {
+        console.log('[VSESSION] Stopping voice session...');
+        voiceSessionRef.current.stop();
+        voiceSessionRef.current.cleanup();
+        console.log('[VSESSION] Voice session stopped');
+      } catch (e: any) {
+        console.warn('[VSESSION] Stop error:', e?.message || e);
+      }
+      voiceSessionRef.current = null;
+      voiceCallbacksRef.current = null;
+    }
+  }, []);
+
+  const sendVoiceNow = useCallback(async (): Promise<void> => {
+    if (voiceSessionRef.current) {
+      try {
+        console.log('[VSESSION] sendNow — forcing audio processing...');
+        await voiceSessionRef.current.sendNow();
+      } catch (e: any) {
+        console.warn('[VSESSION] sendNow error:', e?.message || e);
+      }
+    }
+  }, []);
 
   return (
     <ModelContext.Provider
@@ -585,6 +760,9 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         startListening,
         stopListening,
         isListening,
+        startVoiceSession,
+        stopVoiceSession,
+        sendVoiceNow,
       }}
     >
       {children}

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "food_reduce",
+    "keywords": ["food", "reduce", "save", "cut", "eating", "restaurant", "dining", "cook", "grocery"],
+    "content": "To reduce food spending: cook at home more often, meal prep on weekends, use grocery lists to avoid impulse buys, limit food delivery apps, and eat out only once or twice a week."
+  },
+  {
+    "id": "food_budget",
+    "keywords": ["food", "budget", "how much", "ideal", "percentage", "allocate"],
+    "content": "A healthy food budget is typically 10-15% of your monthly income. If you're spending more than 20% on food, consider cooking at home more and reducing restaurant visits."
+  },
+  {
+    "id": "travel_reduce",
+    "keywords": ["travel", "transport", "commute", "reduce", "save", "fuel", "petrol", "cab", "uber", "ola"],
+    "content": "To cut travel costs: carpool or use public transport, combine multiple errands into one trip, compare cab fares across apps, and consider a monthly transit pass if you commute daily."
+  },
+  {
+    "id": "shopping_reduce",
+    "keywords": ["shopping", "reduce", "impulse", "online", "save", "buy", "purchase", "spend less"],
+    "content": "To reduce shopping spending: wait 24 hours before impulse purchases, unsubscribe from sale emails, set a monthly shopping budget, use wishlists instead of buying immediately, and compare prices before purchasing."
+  },
+  {
+    "id": "entertainment_reduce",
+    "keywords": ["entertainment", "subscription", "streaming", "movie", "reduce", "save", "fun"],
+    "content": "To save on entertainment: audit your subscriptions and cancel unused ones, share family plans, look for free events and activities, set a monthly entertainment budget, and use student or corporate discounts."
+  },
+  {
+    "id": "bills_reduce",
+    "keywords": ["bills", "utility", "electricity", "rent", "reduce", "save", "lower"],
+    "content": "To lower bills: switch to energy-efficient appliances, negotiate your internet and phone plans annually, use autopay to avoid late fees, review insurance policies for better rates, and reduce AC/heating usage."
+  },
+  {
+    "id": "budgeting_start",
+    "keywords": ["budget", "start", "begin", "how to", "plan", "method", "rule"],
+    "content": "Start budgeting with the 50/30/20 rule: 50% of income for needs (rent, bills, groceries), 30% for wants (dining, entertainment, shopping), and 20% for savings and debt repayment."
+  },
+  {
+    "id": "savings_goal",
+    "keywords": ["save", "savings", "goal", "emergency", "fund", "how much", "target"],
+    "content": "Aim to save at least 20% of your income. Build an emergency fund covering 3-6 months of expenses first. Automate transfers to a savings account on payday so you save before you spend."
+  },
+  {
+    "id": "spending_habits",
+    "keywords": ["habit", "pattern", "late night", "impulse", "weekend", "when", "time"],
+    "content": "Common spending traps: late-night online shopping, weekend impulse buys, emotional spending when stressed, and small daily purchases that add up. Track your spending daily to spot patterns."
+  },
+  {
+    "id": "debt_manage",
+    "keywords": ["debt", "loan", "emi", "credit", "card", "pay off", "interest"],
+    "content": "To manage debt: pay more than the minimum on credit cards, tackle high-interest debt first (avalanche method), avoid new debt while paying off existing ones, and consider consolidating multiple loans."
+  },
+  {
+    "id": "income_increase",
+    "keywords": ["income", "earn", "more", "side", "freelance", "extra", "money"],
+    "content": "To increase income: negotiate your salary annually, develop high-demand skills, consider freelancing or consulting on the side, sell unused items, and look for cashback and reward programs."
+  },
+  {
+    "id": "overspending_warning",
+    "keywords": ["overspend", "too much", "over budget", "exceeded", "more than", "high"],
+    "content": "If you're overspending: identify your top spending category and set a strict weekly limit, use cash instead of cards for discretionary spending, remove saved payment methods from shopping apps, and review expenses weekly."
+  },
+  {
+    "id": "financial_health",
+    "keywords": ["health", "score", "financial", "good", "improve", "better", "wellness"],
+    "content": "Good financial health means: spending less than you earn, having an emergency fund, low or no high-interest debt, diverse spending across categories, and consistent spending patterns without big spikes."
+  },
+  {
+    "id": "category_balance",
+    "keywords": ["balance", "diverse", "spread", "category", "distribution", "concentrated"],
+    "content": "A balanced spending profile has no single category exceeding 40% of total spending. If one category dominates, look for ways to optimize it. Diversified spending usually indicates healthier financial habits."
+  },
+  {
+    "id": "monthly_review",
+    "keywords": ["review", "month", "end", "summary", "check", "analyze", "track"],
+    "content": "Do a monthly spending review: compare actual spending to your budget, identify categories where you overspent, celebrate where you stayed under budget, and adjust next month's plan based on patterns."
+  },
+  {
+    "id": "investment_basics",
+    "keywords": ["invest", "mutual fund", "sip", "stock", "return", "grow", "wealth"],
+    "content": "Start investing after building an emergency fund. Begin with SIPs in index mutual funds for long-term growth. Invest consistently regardless of market conditions. Even small amounts compound significantly over years."
+  },
+  {
+    "id": "tax_saving",
+    "keywords": ["tax", "save", "deduction", "80c", "section", "hra"],
+    "content": "Common tax-saving options: Section 80C investments (PPF, ELSS, EPF) up to 1.5 lakh, HRA exemption for rent paid, health insurance premium deduction under 80D, and NPS contributions under 80CCD."
+  },
+  {
+    "id": "general_tip",
+    "keywords": ["tip", "advice", "suggest", "recommend", "help", "general", "what should"],
+    "content": "Top financial tips: track every expense, pay yourself first by saving before spending, avoid lifestyle inflation when income grows, build an emergency fund, and review your finances monthly."
+  }
+]
