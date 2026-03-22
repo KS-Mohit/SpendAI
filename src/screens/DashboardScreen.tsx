@@ -13,10 +13,16 @@ import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
 import MonthlySpendingCard, { CardViewMode } from '../components/MonthlySpendingCard';
 import TransactionRow from '../components/TransactionRow';
+import HealthScoreCard from '../components/HealthScoreCard';
+import BudgetProgressCard from '../components/BudgetProgressCard';
 import {
   getTransactionsInRange,
+  getAllBudgets,
   Transaction,
+  Budget,
 } from '../services/DatabaseService';
+import { calculateHealthScore, HealthResult } from '../services/HealthScoreService';
+import { predictMonthEndSpending, SpendingPrediction } from '../services/PredictionService';
 import { seedFakeData } from '../services/seedData';
 import { getCategoryByKey } from '../constants/categories';
 import { RootStackParamList } from '../types';
@@ -234,6 +240,9 @@ export default function DashboardScreen() {
   const [viewMode, setViewMode] = useState<CardViewMode>('summary');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [monthTransactions, setMonthTransactions] = useState<Transaction[]>([]);
+  const [monthTotal, setMonthTotal] = useState(0);
   const seededRef = useRef(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -250,6 +259,15 @@ export default function DashboardScreen() {
         const txs = await getTransactionsInRange(start, end);
         setTransactions(txs);
         setTotal(txs.reduce((sum, t) => sum + t.amount, 0));
+
+        // Always load current month data for health score, budgets, predictions
+        const { start: mStart, end: mEnd } = getPeriodRange('month');
+        const mTxs = await getTransactionsInRange(mStart, mEnd);
+        setMonthTransactions(mTxs);
+        setMonthTotal(mTxs.reduce((sum, t) => sum + t.amount, 0));
+
+        const b = await getAllBudgets();
+        setBudgets(b);
       }
       load();
     }, [period])
@@ -258,6 +276,27 @@ export default function DashboardScreen() {
   const chartData = buildChartData(transactions, period);
   const categoryData = buildCategoryData(transactions, colors);
   const grouped = groupByDate(transactions);
+
+  // Health score (always based on current month)
+  const healthResult: HealthResult = useMemo(
+    () => calculateHealthScore(monthTransactions, budgets),
+    [monthTransactions, budgets]
+  );
+
+  // Spending by category for budget progress
+  const categorySpending: Record<string, number> = useMemo(() => {
+    const map: Record<string, number> = {};
+    monthTransactions.forEach((t) => {
+      map[t.category] = (map[t.category] || 0) + t.amount;
+    });
+    return map;
+  }, [monthTransactions]);
+
+  // Month-end prediction
+  const prediction: SpendingPrediction | null = useMemo(
+    () => (monthTotal > 0 ? predictMonthEndSpending(monthTotal) : null),
+    [monthTotal]
+  );
 
   const totalFormatted = total.toLocaleString('en-IN', {
     minimumFractionDigits: 2,
@@ -343,6 +382,17 @@ export default function DashboardScreen() {
               onViewModeChange={setViewMode}
               chartData={chartData}
               categoryData={categoryData}
+              prediction={period === 'month' ? prediction : null}
+            />
+
+            {/* Health Score */}
+            <HealthScoreCard result={healthResult} />
+
+            {/* Budget Goals */}
+            <BudgetProgressCard
+              budgets={budgets}
+              spending={categorySpending}
+              onSetBudgets={() => navigation.navigate('Budget')}
             />
 
             {/* Recent Activity header */}

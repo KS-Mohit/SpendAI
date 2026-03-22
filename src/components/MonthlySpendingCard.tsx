@@ -19,6 +19,12 @@ interface CategoryData {
   color: string;
 }
 
+interface Prediction {
+  predicted: number;
+  dailyAverage: number;
+  daysRemaining: number;
+}
+
 interface MonthlySpendingCardProps {
   spendAmount: number;
   periodLabel: string;
@@ -26,6 +32,7 @@ interface MonthlySpendingCardProps {
   onViewModeChange: (mode: CardViewMode) => void;
   chartData: ChartData[];
   categoryData: CategoryData[];
+  prediction?: Prediction | null;
 }
 
 export default function MonthlySpendingCard({
@@ -35,6 +42,7 @@ export default function MonthlySpendingCard({
   onViewModeChange,
   chartData,
   categoryData,
+  prediction,
 }: MonthlySpendingCardProps) {
   const { colors } = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -91,6 +99,21 @@ export default function MonthlySpendingCard({
           <Text style={styles.summaryAmount}>
             {'\u20b9'}{spendAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
+          {prediction && prediction.daysRemaining > 0 && (
+            <View style={styles.predictionRow}>
+              <View style={styles.predictionLine}>
+                <Text style={styles.predictionArrow}>{'\u2192'}</Text>
+                <View>
+                  <Text style={styles.predictionText}>
+                    Projected: {'\u20b9'}{Math.round(prediction.predicted).toLocaleString('en-IN')} by month end
+                  </Text>
+                  <Text style={styles.predictionSub}>
+                    {'\u20b9'}{Math.round(prediction.dailyAverage).toLocaleString('en-IN')}/day avg {'\u00b7'} {prediction.daysRemaining} days left
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -167,6 +190,33 @@ function createStyles(c: ColorScheme) {
       fontWeight: '800',
       color: c.onPrimary,
       letterSpacing: -1,
+      marginBottom: 4,
+    },
+    predictionRow: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    predictionLine: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    predictionArrow: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: 'rgba(255, 255, 255, 0.9)',
+    },
+    predictionText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: 'rgba(255, 255, 255, 0.9)',
+    },
+    predictionSub: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: 'rgba(255, 255, 255, 0.5)',
+      marginTop: 3,
     },
 
     // Chart view

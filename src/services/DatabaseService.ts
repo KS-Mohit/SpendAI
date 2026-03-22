@@ -15,8 +15,15 @@ export interface Transaction {
 // ---------------------------------------------------------------------------
 // In-memory fallback for web (expo-sqlite WASM doesn't bundle in Metro web)
 // ---------------------------------------------------------------------------
+export interface Budget {
+  category: string;
+  amount: number;
+  month: number;
+}
+
 let memoryStore: Transaction[] = [];
 let memoryIdCounter = 0;
+let memoryBudgets: Budget[] = [];
 
 const webFallback = {
   async insert(tx: Omit<Transaction, 'id' | 'created_at'>, createdAt?: number): Promise<number> {
@@ -79,6 +86,14 @@ async function getDb(): Promise<any> {
         note          TEXT,
         raw_sms       TEXT,
         created_at    INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS budgets (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        category   TEXT NOT NULL,
+        amount     REAL NOT NULL,
+        month      INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE(category, month)
       );
     `);
   }
@@ -248,4 +263,64 @@ export async function insertTransactionAt(
     createdAt
   );
   return result.lastInsertRowId;
+}
+
+// ---------------------------------------------------------------------------
+// Budget API
+// ---------------------------------------------------------------------------
+
+export function getCurrentMonth(): number {
+  const now = new Date();
+  return now.getFullYear() * 100 + now.getMonth() + 1;
+}
+
+export async function setBudget(category: string, amount: number, month?: number): Promise<void> {
+  const m = month ?? getCurrentMonth();
+  const now = Math.floor(Date.now() / 1000);
+
+  if (isWeb) {
+    const existing = memoryBudgets.findIndex((b) => b.category === category && b.month === m);
+    if (existing >= 0) {
+      memoryBudgets[existing].amount = amount;
+    } else {
+      memoryBudgets.push({ category, amount, month: m });
+    }
+    return;
+  }
+
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO budgets (category, amount, month, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(category, month) DO UPDATE SET amount = ?, updated_at = ?`,
+    category, amount, m, now, amount, now
+  );
+}
+
+export async function getAllBudgets(month?: number): Promise<Budget[]> {
+  const m = month ?? getCurrentMonth();
+
+  if (isWeb) {
+    return memoryBudgets.filter((b) => b.month === m);
+  }
+
+  const database = await getDb();
+  return database.getAllAsync(
+    'SELECT category, amount, month FROM budgets WHERE month = ?',
+    m
+  );
+}
+
+export async function deleteBudget(category: string, month?: number): Promise<void> {
+  const m = month ?? getCurrentMonth();
+
+  if (isWeb) {
+    memoryBudgets = memoryBudgets.filter((b) => !(b.category === category && b.month === m));
+    return;
+  }
+
+  const database = await getDb();
+  await database.runAsync(
+    'DELETE FROM budgets WHERE category = ? AND month = ?',
+    category, m
+  );
 }

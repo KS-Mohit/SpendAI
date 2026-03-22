@@ -10,10 +10,12 @@ import {
   ParsedSMS,
 } from './src/services/SMSService';
 import { ThemeProvider, useColors } from './src/theme/ThemeContext';
+import { CardExpandProvider } from './src/context/CardExpandContext';
 import DashboardScreen from './src/screens/DashboardScreen';
 import ConfirmTransactionScreen from './src/screens/ConfirmTransactionScreen';
 import TransactionDetailScreen from './src/screens/TransactionDetailScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
+import BudgetScreen from './src/screens/BudgetScreen';
 import DevScreen from './src/screens/DevScreen';
 
 // Configure notifications to show when app is in foreground
@@ -111,6 +113,11 @@ function AppNavigator() {
           options={{ title: '' }}
         />
         <Stack.Screen
+          name="Budget"
+          component={BudgetScreen}
+          options={{ title: 'Budgets' }}
+        />
+        <Stack.Screen
           name="Dev"
           component={DevScreen}
           options={{ title: '' }}
@@ -124,9 +131,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ModelProvider>
-          <AppNavigator />
-        </ModelProvider>
+        <CardExpandProvider>
+          <ModelProvider>
+            <AppNavigator />
+          </ModelProvider>
+        </CardExpandProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
