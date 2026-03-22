@@ -27,16 +27,20 @@ export default function ConfirmTransactionScreen() {
   const { colors } = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const isManual = amount === 0 && !rawSms;
+  const [manualAmount, setManualAmount] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const finalAmount = isManual ? parseFloat(manualAmount.replace(/,/g, '') || '0') : amount;
+
   async function handleSave() {
-    if (!selected) return;
+    if (!selected || finalAmount <= 0) return;
     setSaving(true);
 
     await insertTransaction({
-      amount,
+      amount: finalAmount,
       category: selected,
       ai_suggestion: null,
       confidence: null,
@@ -77,10 +81,28 @@ export default function ConfirmTransactionScreen() {
           {/* Amount Hero */}
           <View style={styles.amountSection}>
             <Text style={styles.amountLabel}>AMOUNT TO LOG</Text>
-            <Text style={styles.amount}>
-              <Text style={styles.amountCurrency}>{'\u20b9'}</Text>
-              {amount.toLocaleString('en-IN')}
-            </Text>
+            {isManual ? (
+              <View style={styles.amountInputRow}>
+                <Text style={styles.amountCurrency}>{'\u20b9'}</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0"
+                  placeholderTextColor={colors.outlineVariant}
+                  value={manualAmount}
+                  onChangeText={(v) => {
+                    const cleaned = v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setManualAmount(cleaned);
+                  }}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+              </View>
+            ) : (
+              <Text style={styles.amount}>
+                <Text style={styles.amountCurrency}>{'\u20b9'}</Text>
+                {amount.toLocaleString('en-IN')}
+              </Text>
+            )}
           </View>
 
           {rawSms ? (
@@ -119,9 +141,9 @@ export default function ConfirmTransactionScreen() {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveBtn, !selected && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (!selected || finalAmount <= 0) && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={!selected || saving}
+            disabled={!selected || finalAmount <= 0 || saving}
             activeOpacity={0.8}
           >
             {saving ? (
@@ -219,6 +241,18 @@ function createStyles(c: ColorScheme) {
       fontSize: 32,
       color: c.outlineVariant,
       fontWeight: '700',
+    },
+    amountInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    amountInput: {
+      flex: 1,
+      fontSize: 56,
+      fontWeight: '800',
+      color: c.onSurface,
+      letterSpacing: -2,
+      paddingVertical: 0,
     },
     smsSnippet: {
       fontSize: 13,
