@@ -352,75 +352,26 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     [sttReady]
   );
 
-  // ── TTS speak ──
-  const soundRef = useRef<any>(null);
-
+  // ── TTS speak (uses RunAnywhere.speak → react-native-sound directly) ──
   const speak = useCallback(
     async (text: string): Promise<void> => {
       if (!RunAnywhere) return;
-
-      if (ttsReady) {
-        console.log('[TTS] Synthesizing:', text.substring(0, 60));
-        const result = await RunAnywhere.synthesize(text, {
-          voice: 'default',
-          rate: 1.0,
-          pitch: 1.0,
-          volume: 1.0,
-        });
-        console.log('[TTS] Synthesis done, creating WAV...');
-        const wavPath = await RunAnywhere.Audio.createWavFromPCMFloat32(
-          result.audio,
-          result.sampleRate || 22050
-        );
-        console.log('[TTS] WAV created:', wavPath);
-
-        // Play using expo-av and wait for completion
-        const { Audio } = require('expo-av');
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-        });
-        const fileUri = wavPath.startsWith('file://') ? wavPath : `file://${wavPath}`;
-        console.log('[TTS] Playing URI:', fileUri);
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: fileUri },
-          { shouldPlay: true, volume: 1.0 }
-        );
-        soundRef.current = sound;
-        console.log('[TTS] Playback started');
-
-        // Wait for playback to finish before returning
-        await new Promise<void>((resolve) => {
-          sound.setOnPlaybackStatusUpdate((s: any) => {
-            if (s.didJustFinish) {
-              console.log('[TTS] Playback finished');
-              sound.unloadAsync();
-              soundRef.current = null;
-              resolve();
-            }
-          });
-        });
-      } else {
-        // Fallback to system TTS
-        console.log('[TTS] Using system fallback');
-        try {
-          await RunAnywhere.speak(text, { rate: 1.0, pitch: 1.0, volume: 1.0 });
-        } catch {
-          console.warn('[TTS] System TTS not available');
-        }
+      console.log('[TTS] Speaking:', text.substring(0, 60));
+      try {
+        await RunAnywhere.speak(text, { rate: 1.0, pitch: 1.0, volume: 1.0 });
+        console.log('[TTS] Done speaking');
+      } catch (e: any) {
+        console.warn('[TTS] speak failed:', e?.message || e);
       }
     },
-    [ttsReady]
+    []
   );
 
   const stopSpeaking = useCallback(async (): Promise<void> => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      } catch {}
-    }
+    if (!RunAnywhere) return;
+    try {
+      await RunAnywhere.stopSpeaking();
+    } catch {}
   }, []);
 
   // ── Record with react-native-live-audio-stream (raw PCM) + transcribe ──
