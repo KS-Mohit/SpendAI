@@ -21,6 +21,7 @@ import {
   Transaction,
 } from '../services/DatabaseService';
 import { getCategoryByKey } from '../constants/categories';
+import CategoryIcon from '../components/CategoryIcon';
 import { RootStackParamList } from '../types';
 
 type ScreenRouteProp = RouteProp<RootStackParamList, 'TransactionDetail'>;
@@ -115,7 +116,7 @@ export default function TransactionDetailScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Category</Text>
               <View style={styles.categoryTag}>
-                <Text style={styles.categoryIcon}>{cat?.icon}</Text>
+                <CategoryIcon name={cat?.icon ?? 'dots-horizontal'} size={24} iconSize={14} />
                 <Text style={styles.detailValue}>
                   {cat?.label ?? tx.category}
                 </Text>
@@ -264,9 +265,6 @@ function createStyles(c: ColorScheme) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-    },
-    categoryIcon: {
-      fontSize: 20,
     },
     detailValue: {
       fontSize: 15,

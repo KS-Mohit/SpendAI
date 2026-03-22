@@ -1,16 +1,17 @@
 export interface Category {
   key: string;
   label: string;
-  icon: string;
+  icon: string;       // MaterialCommunityIcons name
+  iconFallback: string; // simple text fallback
 }
 
 export const CATEGORIES: Category[] = [
-  { key: 'food', label: 'Food', icon: '🍕' },
-  { key: 'travel', label: 'Travel', icon: '✈️' },
-  { key: 'bills', label: 'Bills', icon: '🏠' },
-  { key: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { key: 'entertainment', label: 'Entertainment', icon: '🎬' },
-  { key: 'other', label: 'Other', icon: '➕' },
+  { key: 'food', label: 'Food', icon: 'silverware-fork-knife', iconFallback: 'F' },
+  { key: 'travel', label: 'Travel', icon: 'train-car', iconFallback: 'T' },
+  { key: 'bills', label: 'Bills', icon: 'receipt', iconFallback: 'B' },
+  { key: 'shopping', label: 'Shopping', icon: 'shopping-outline', iconFallback: 'S' },
+  { key: 'entertainment', label: 'Entertainment', icon: 'movie-open-outline', iconFallback: 'E' },
+  { key: 'other', label: 'Other', icon: 'dots-horizontal', iconFallback: '+' },
 ];
 
 export function getCategoryByKey(key: string): Category | undefined {

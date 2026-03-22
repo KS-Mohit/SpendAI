@@ -5,6 +5,7 @@ import { ColorScheme } from '../theme/colors';
 import { Budget } from '../services/DatabaseService';
 import { getCategoryByKey } from '../constants/categories';
 import { useCardExpand } from '../context/CardExpandContext';
+import CategoryIcon from './CategoryIcon';
 
 interface CategorySpending {
   category: string;
@@ -48,9 +49,7 @@ export default function BudgetProgressCard({
       {!isExpanded ? (
         /* COLLAPSED */
         <View style={styles.collapsedRow}>
-          <View style={styles.collapsedIcon}>
-            <Text style={styles.collapsedIconText}>{'\u{1F3AF}'}</Text>
-          </View>
+          <CategoryIcon name="target" size={36} iconSize={18} backgroundColor={colors.primaryContainer} iconColor={colors.primary} />
           <View style={styles.collapsedInfo}>
             <Text style={styles.collapsedTitle}>Budget Goals</Text>
             <Text style={styles.collapsedSummary}>{summaryText}</Text>
@@ -91,7 +90,7 @@ export default function BudgetProgressCard({
                 return (
                   <View key={item.category} style={styles.item}>
                     <View style={styles.itemHeader}>
-                      <Text style={styles.itemIcon}>{cat?.icon ?? '+'}</Text>
+                      <CategoryIcon name={cat?.icon ?? 'dots-horizontal'} size={24} iconSize={14} />
                       <Text style={styles.itemLabel}>{cat?.label ?? item.category}</Text>
                       <Text style={[styles.itemAmount, isOver && { color: colors.error }]}>
                         {'\u20b9'}{Math.round(item.spent).toLocaleString('en-IN')}
@@ -150,17 +149,6 @@ function createStyles(c: ColorScheme) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-    },
-    collapsedIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: c.primaryContainer,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    collapsedIconText: {
-      fontSize: 16,
     },
     collapsedInfo: {
       flex: 1,
@@ -239,9 +227,6 @@ function createStyles(c: ColorScheme) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-    },
-    itemIcon: {
-      fontSize: 16,
     },
     itemLabel: {
       flex: 1,

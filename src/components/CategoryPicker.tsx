@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CATEGORIES } from '../constants/categories';
 import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
+import CategoryIcon from './CategoryIcon';
 
 interface CategoryPickerProps {
   selected: string | null;
@@ -29,9 +30,13 @@ export default function CategoryPicker({
             onPress={() => onSelect(cat.key)}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconCircle, isSelected && styles.iconCircleSelected]}>
-              <Text style={styles.icon}>{cat.icon}</Text>
-            </View>
+            <CategoryIcon
+              name={cat.icon}
+              size={56}
+              iconSize={24}
+              backgroundColor={isSelected ? colors.primaryContainer : colors.surfaceContainerLowest}
+              iconColor={isSelected ? colors.primary : colors.onSurfaceVariant}
+            />
             <Text style={[styles.label, isSelected && styles.labelSelected]}>
               {cat.label}
             </Text>
@@ -57,27 +62,6 @@ function createStyles(c: ColorScheme) {
       gap: 8,
     },
     buttonSelected: {},
-    iconCircle: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
-      backgroundColor: c.surfaceContainerLowest,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 1,
-    },
-    iconCircleSelected: {
-      backgroundColor: c.primaryContainer,
-      borderWidth: 2,
-      borderColor: c.primary,
-    },
-    icon: {
-      fontSize: 24,
-    },
     label: {
       fontSize: 10,
       fontWeight: '500',

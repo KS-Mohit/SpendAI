@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getCategoryByKey } from '../constants/categories';
 import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
+import CategoryIcon from './CategoryIcon';
 
 interface TransactionRowProps {
   category: string;
@@ -45,8 +46,8 @@ export default function TransactionRow({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const cat = getCategoryByKey(category);
-  const icon = cat?.icon ?? '\u2795';
   const bgColor = getCategoryColors(colors)[category] ?? colors.surfaceContainerHigh;
+  const textColor = getCategoryTextColors(colors)[category] ?? colors.onSurface;
 
   return (
     <TouchableOpacity
@@ -55,8 +56,14 @@ export default function TransactionRow({
       activeOpacity={0.7}
       disabled={!onPress}
     >
-      <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
-        <Text style={styles.icon}>{icon}</Text>
+      <View style={styles.iconContainer}>
+        <CategoryIcon
+          name={cat?.icon ?? 'dots-horizontal'}
+          size={48}
+          iconSize={22}
+          backgroundColor={bgColor}
+          iconColor={textColor}
+        />
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
@@ -83,15 +90,7 @@ function createStyles(c: ColorScheme) {
       marginBottom: 8,
     },
     iconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
       marginRight: 14,
-    },
-    icon: {
-      fontSize: 20,
     },
     info: {
       flex: 1,

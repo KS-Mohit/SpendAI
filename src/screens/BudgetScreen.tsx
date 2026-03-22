@@ -12,6 +12,7 @@ import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
 import { CATEGORIES } from '../constants/categories';
 import { getAllBudgets, setBudget, deleteBudget } from '../services/DatabaseService';
+import CategoryIcon from '../components/CategoryIcon';
 
 export default function BudgetScreen() {
   const navigation = useNavigation();
@@ -68,7 +69,7 @@ export default function BudgetScreen() {
         {CATEGORIES.map((cat) => (
           <View key={cat.key} style={styles.row}>
             <View style={styles.rowLeft}>
-              <Text style={styles.rowIcon}>{cat.icon}</Text>
+              <CategoryIcon name={cat.icon} size={36} iconSize={18} />
               <Text style={styles.rowLabel}>{cat.label}</Text>
             </View>
             <View style={styles.inputWrapper}>
@@ -139,9 +140,6 @@ function createStyles(c: ColorScheme) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-    },
-    rowIcon: {
-      fontSize: 22,
     },
     rowLabel: {
       fontSize: 15,

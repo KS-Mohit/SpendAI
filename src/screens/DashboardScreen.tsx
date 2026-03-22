@@ -315,9 +315,9 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>TC</Text>
+            <Text style={styles.avatarText}>HX</Text>
           </View>
-          <Text style={styles.headerTitle}>The Curator</Text>
+          <Text style={styles.headerTitle}>HackXtreme</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
