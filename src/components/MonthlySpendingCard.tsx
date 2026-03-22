@@ -44,8 +44,8 @@ export default function MonthlySpendingCard({
   categoryData,
   prediction,
 }: MonthlySpendingCardProps) {
-  const { colors } = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { colors, isDark } = useColors();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   return (
     <View style={styles.container}>
@@ -134,7 +134,15 @@ export default function MonthlySpendingCard({
   );
 }
 
-function createStyles(c: ColorScheme) {
+function createStyles(c: ColorScheme, isDark: boolean) {
+  // In dark mode: primary is a light green (#7cdbaa), so white text works well
+  // In light mode: primary is a dark green (#2b6954), so white text also works well
+  // User preference: keep white in light mode, black in dark mode
+  const textMain = isDark ? '#000000' : 'rgba(255, 255, 255, 0.95)';
+  const textSub = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.6)';
+  const textStrong = isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+  const divider = isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)';
+
   return StyleSheet.create({
     container: {
       paddingHorizontal: 20,
@@ -180,7 +188,7 @@ function createStyles(c: ColorScheme) {
     summaryLabel: {
       fontSize: 10,
       fontWeight: '700',
-      color: 'rgba(255, 255, 255, 0.6)',
+      color: textSub,
       letterSpacing: 1.5,
       textTransform: 'uppercase',
       marginBottom: 8,
@@ -188,7 +196,7 @@ function createStyles(c: ColorScheme) {
     summaryAmount: {
       fontSize: 34,
       fontWeight: '800',
-      color: c.onPrimary,
+      color: textMain,
       letterSpacing: -1,
       marginBottom: 4,
     },
@@ -196,7 +204,7 @@ function createStyles(c: ColorScheme) {
       marginTop: 12,
       paddingTop: 12,
       borderTopWidth: 1,
-      borderTopColor: 'rgba(255, 255, 255, 0.15)',
+      borderTopColor: divider,
     },
     predictionLine: {
       flexDirection: 'row',
@@ -205,17 +213,17 @@ function createStyles(c: ColorScheme) {
     predictionArrow: {
       fontSize: 14,
       fontWeight: '600',
-      color: 'rgba(255, 255, 255, 0.9)',
+      color: textStrong,
     },
     predictionText: {
       fontSize: 14,
       fontWeight: '600',
-      color: 'rgba(255, 255, 255, 0.9)',
+      color: textStrong,
     },
     predictionSub: {
       fontSize: 11,
       fontWeight: '500',
-      color: 'rgba(255, 255, 255, 0.5)',
+      color: textSub,
       marginTop: 3,
     },
 
