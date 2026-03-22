@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useColors } from '../theme/ThemeContext';
@@ -53,7 +54,7 @@ export default function ConfirmTransactionScreen() {
   }
 
   return (
-    <View style={styles.overlay}>
+    <SafeAreaView style={styles.overlay} edges={['top']}>
       <TouchableWithoutFeedback onPress={() => navigation.goBack()}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
@@ -154,7 +155,7 @@ export default function ConfirmTransactionScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useColors } from '../theme/ThemeContext';
@@ -100,8 +101,9 @@ export default function TransactionDetailScreen() {
   });
 
   return (
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView
-      style={styles.container}
+      style={styles.scrollView}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
@@ -212,6 +214,7 @@ export default function TransactionDetailScreen() {
         </>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -220,6 +223,9 @@ function createStyles(c: ColorScheme) {
     container: {
       flex: 1,
       backgroundColor: c.background,
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       padding: 24,

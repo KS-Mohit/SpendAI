@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
@@ -55,8 +56,9 @@ export default function BudgetScreen() {
   }
 
   return (
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView
-      style={styles.container}
+      style={styles.scrollView}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
@@ -98,6 +100,7 @@ export default function BudgetScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -106,6 +109,9 @@ function createStyles(c: ColorScheme) {
     container: {
       flex: 1,
       backgroundColor: c.background,
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       padding: 24,

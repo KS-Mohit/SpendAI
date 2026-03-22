@@ -13,6 +13,7 @@ import {
   Keyboard,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useColors } from '../theme/ThemeContext';
 import { ColorScheme } from '../theme/colors';
@@ -145,6 +146,8 @@ export default function InsightsScreen() {
   useEffect(() => {
     if (voiceState === 'listening') {
       startVisualizerAnim('high');
+    } else if (voiceState === 'speaking') {
+      startVisualizerAnim('low');
     } else {
       stopVisualizerAnim();
     }
@@ -264,6 +267,15 @@ export default function InsightsScreen() {
     setMessages((prev) => [...prev, assistantMsg]);
     setVoiceLoading(false);
     scrollVoiceToEnd();
+
+    // Speak the answer
+    setVoiceState('speaking');
+    try {
+      await speak(answer);
+    } catch (e: any) {
+      console.warn('[VOICE] TTS error:', e?.message || e);
+    }
+    setVoiceState('idle');
   }
 
   function openVoiceMode() {
@@ -272,7 +284,6 @@ export default function InsightsScreen() {
     setVoiceInput('');
     setVoiceMessages([]);
     voiceActiveRef.current = true;
-    beginListening();
   }
 
   function closeVoiceMode() {
@@ -340,15 +351,18 @@ export default function InsightsScreen() {
   const voiceStateLabel =
     voiceState === 'listening' ? 'Listening — tap to stop' :
     voiceState === 'thinking' ? 'Transcribing...' :
+    voiceState === 'speaking' ? 'Speaking...' :
     'Tap mic to start';
 
   const voiceStateColor =
     voiceState === 'listening' ? colors.error :
+    voiceState === 'speaking' ? colors.primary :
     colors.onSurfaceVariant;
 
   return (
+    <SafeAreaView style={styles.container} edges={['top']}>
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
@@ -441,7 +455,7 @@ export default function InsightsScreen() {
         animationType="slide"
         onRequestClose={closeVoiceMode}
       >
-        <View style={[styles.voiceContainer, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.voiceContainer, { backgroundColor: colors.background }]} edges={['top']}>
           {/* Voice header */}
           <View style={styles.voiceHeader}>
             <TouchableOpacity onPress={closeVoiceMode} style={styles.voiceCloseBtn}>
@@ -463,7 +477,8 @@ export default function InsightsScreen() {
                   style={[
                     styles.visualizerBar,
                     {
-                      backgroundColor: voiceState === 'listening' ? colors.error : colors.outlineVariant,
+                      backgroundColor: voiceState === 'listening' ? colors.error :
+                        voiceState === 'speaking' ? colors.primary : colors.outlineVariant,
                       height: anim.interpolate({
                         inputRange: [0, 1],
                         outputRange: [4, 60],
@@ -473,28 +488,6 @@ export default function InsightsScreen() {
                 />
               ))}
             </View>
-
-            {/* Mic button */}
-            <TouchableOpacity
-              style={[
-                styles.voiceMicBtn,
-                voiceState === 'listening' && { backgroundColor: colors.error },
-                voiceState === 'thinking' && { opacity: 0.5 },
-              ]}
-              onPress={handleVoiceTap}
-              disabled={voiceState === 'thinking'}
-              activeOpacity={0.7}
-            >
-              {voiceState === 'thinking' ? (
-                <ActivityIndicator size="large" color={colors.primary} />
-              ) : (
-                <MaterialCommunityIcons
-                  name={voiceState === 'listening' ? 'stop' : 'microphone'}
-                  size={32}
-                  color={colors.onPrimary}
-                />
-              )}
-            </TouchableOpacity>
           </View>
 
           {/* Conversation */}
@@ -580,7 +573,7 @@ export default function InsightsScreen() {
               <MaterialCommunityIcons name="send" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* ── Salary Modal ── */}
@@ -708,6 +701,7 @@ export default function InsightsScreen() {
         </View>
       </Modal>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useColors } from '../theme/ThemeContext';
@@ -52,8 +53,9 @@ export default function DevScreen() {
   }
 
   return (
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView
-      style={styles.container}
+      style={styles.scrollView}
       contentContainerStyle={styles.content}
     >
       <Text style={styles.title}>Dev Tools</Text>
@@ -141,6 +143,7 @@ export default function DevScreen() {
         <Text style={styles.fireBtnText}>Fire Custom SMS</Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -149,6 +152,9 @@ function createStyles(c: ColorScheme) {
     container: {
       flex: 1,
       backgroundColor: c.background,
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       padding: 24,

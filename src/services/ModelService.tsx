@@ -41,11 +41,11 @@ const LLM_MODEL_URL =
   'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf';
 const LLM_MODEL_MEMORY = 700_000_000;
 
-const STT_MODEL_ID = 'sherpa-onnx-whisper-tiny.en';
-const STT_MODEL_NAME = 'Sherpa Whisper Tiny (ONNX)';
+const STT_MODEL_ID = 'sherpa-onnx-whisper-base.en';
+const STT_MODEL_NAME = 'Sherpa Whisper Base (ONNX)';
 const STT_MODEL_URL =
-  'https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/sherpa-onnx-whisper-tiny.en.tar.gz';
-const STT_MODEL_MEMORY = 75_000_000;
+  'https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/sherpa-onnx-whisper-base.en.tar.gz';
+const STT_MODEL_MEMORY = 150_000_000;
 
 const TTS_MODEL_ID = 'vits-piper-en_US-lessac-medium';
 const TTS_MODEL_NAME = 'Piper TTS (US English - Medium)';
