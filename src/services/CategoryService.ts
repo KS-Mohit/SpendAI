@@ -69,18 +69,44 @@ export function buildQueryPrompt(
   return `Answer questions about spending from the data provided. Be direct and brief.\n\nTransactions: ${transactionsJson}. Question: "${question}"`;
 }
 
+function buildSpendingSummary(transactionsJson: string): string {
+  try {
+    const txs: { amount: number; category: string; date: string; note: string | null }[] =
+      JSON.parse(transactionsJson);
+
+    if (txs.length === 0) return 'No transactions recorded yet.';
+
+    const totalSpend = txs.reduce((sum, t) => sum + t.amount, 0);
+    const byCategory: Record<string, number> = {};
+    txs.forEach((t) => {
+      byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
+    });
+
+    const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    const breakdown = sorted
+      .map(([cat, amt]) => `${cat}: ₹${amt.toLocaleString('en-IN')} (${Math.round((amt / totalSpend) * 100)}%)`)
+      .join(', ');
+
+    return `Total spending: ₹${totalSpend.toLocaleString('en-IN')} across ${txs.length} transactions. Breakdown: ${breakdown}.`;
+  } catch {
+    return transactionsJson;
+  }
+}
+
 export function buildChatPrompt(
   transactionsJson: string,
   question: string,
   salary?: { amount: number; period: 'monthly' | 'yearly'; currency: string } | null
 ): string {
   const salaryContext = salary
-    ? `\nUser's ${salary.period} salary: ${salary.currency}${salary.amount.toLocaleString()}.`
+    ? ` Income: ${salary.currency}${salary.amount.toLocaleString()}/${salary.period === 'monthly' ? 'mo' : 'yr'}.`
     : '';
 
-  return `You are a personal finance assistant analyzing the user's spending data. Be helpful, specific, and actionable. Keep responses concise (3-5 sentences max). Use numbers from the data when possible.${salaryContext}
+  const summary = buildSpendingSummary(transactionsJson);
 
-Transactions: ${transactionsJson}
+  return `Finance assistant. Use ONLY data below. Be brief (2-3 sentences). Use ₹ only.${salaryContext}
 
-User: ${question}`;
+${summary}
+
+Q: ${question}`;
 }

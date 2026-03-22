@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors } from '../theme/colors';
+import { useColors } from '../theme/ThemeContext';
+import { ColorScheme } from '../theme/colors';
 import { fireTestSMS } from '../services/SMSService';
 import { useModel } from '../services/ModelService';
 import { RootStackParamList } from '../types';
@@ -39,7 +40,10 @@ const TEMPLATES = [
 export default function DevScreen() {
   const navigation = useNavigation<NavProp>();
   const { status, downloadProgress, error } = useModel();
+  const { colors, isDark, mode, toggle, setMode } = useColors();
   const [customSms, setCustomSms] = useState('');
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   function handleFire(smsText: string) {
     if (!smsText.trim()) return;
@@ -53,6 +57,24 @@ export default function DevScreen() {
       contentContainerStyle={styles.content}
     >
       <Text style={styles.title}>Dev Tools</Text>
+
+      {/* Theme Toggle */}
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>APPEARANCE</Text>
+        <View style={styles.themeRow}>
+          {(['system', 'light', 'dark'] as const).map((m) => (
+            <TouchableOpacity
+              key={m}
+              style={[styles.themeBtn, mode === m && styles.themeBtnActive]}
+              onPress={() => setMode(m)}
+            >
+              <Text style={[styles.themeBtnText, mode === m && styles.themeBtnTextActive]}>
+                {m === 'system' ? 'Auto' : m === 'light' ? 'Light' : 'Dark'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       {/* Model Status */}
       <View style={styles.card}>
@@ -105,7 +127,7 @@ export default function DevScreen() {
       <TextInput
         style={styles.customInput}
         placeholder="Enter custom SMS text..."
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.outlineVariant}
         value={customSms}
         onChangeText={setCustomSms}
         multiline
@@ -122,105 +144,135 @@ export default function DevScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: 24,
-    paddingBottom: 60,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 24,
-  },
-  card: {
-    backgroundColor: Colors.backgroundMuted,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    letterSpacing: 1,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  statusText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: Colors.border,
-    borderRadius: 3,
-    marginTop: 12,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.accent,
-    borderRadius: 3,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '400',
-    letterSpacing: 1,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  templateCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 16,
-    marginBottom: 12,
-  },
-  templateLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  templateSms: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  fireBtn: {
-    backgroundColor: Colors.accent,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-  },
-  fireBtnFull: {
-    alignSelf: 'stretch',
-    marginTop: 8,
-  },
-  fireBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.background,
-  },
-  customInput: {
-    backgroundColor: Colors.backgroundMuted,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-});
+function createStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    content: {
+      padding: 24,
+      paddingBottom: 60,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: c.primary,
+      marginBottom: 24,
+      letterSpacing: -0.5,
+    },
+    card: {
+      backgroundColor: c.surfaceContainerLow,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 24,
+    },
+    cardLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      color: c.onSurfaceVariant,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+    },
+    statusText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.onSurface,
+    },
+    progressTrack: {
+      height: 6,
+      backgroundColor: c.surfaceContainerHighest,
+      borderRadius: 3,
+      marginTop: 12,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: c.primary,
+      borderRadius: 3,
+    },
+    themeRow: {
+      flexDirection: 'row',
+      backgroundColor: c.surfaceContainer,
+      borderRadius: 20,
+      padding: 4,
+    },
+    themeBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 16,
+    },
+    themeBtnActive: {
+      backgroundColor: c.primary,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    themeBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.onSurfaceVariant,
+    },
+    themeBtnTextActive: {
+      color: c.onPrimary,
+      fontWeight: '700',
+    },
+    sectionTitle: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      color: c.onSurfaceVariant,
+      textTransform: 'uppercase',
+      marginBottom: 12,
+    },
+    templateCard: {
+      backgroundColor: c.surfaceContainerLow,
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 12,
+    },
+    templateLabel: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.onSurface,
+      marginBottom: 4,
+    },
+    templateSms: {
+      fontSize: 13,
+      color: c.onSurfaceVariant,
+      lineHeight: 18,
+      marginBottom: 12,
+    },
+    fireBtn: {
+      backgroundColor: c.primary,
+      borderRadius: 20,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      alignSelf: 'flex-start',
+      alignItems: 'center',
+    },
+    fireBtnFull: {
+      alignSelf: 'stretch',
+      marginTop: 12,
+    },
+    fireBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.onPrimary,
+    },
+    customInput: {
+      backgroundColor: c.surfaceContainerLow,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 14,
+      color: c.onSurface,
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+  });
+}

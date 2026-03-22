@@ -9,7 +9,7 @@ import {
   sendTransactionNotification,
   ParsedSMS,
 } from './src/services/SMSService';
-import { Colors } from './src/theme/colors';
+import { ThemeProvider, useColors } from './src/theme/ThemeContext';
 import DashboardScreen from './src/screens/DashboardScreen';
 import ConfirmTransactionScreen from './src/screens/ConfirmTransactionScreen';
 import TransactionDetailScreen from './src/screens/TransactionDetailScreen';
@@ -33,6 +33,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
   const { initializeModel } = useModel();
+  const { colors } = useColors();
   const navigationRef = React.useRef<any>(null);
 
   // Initialize model on mount
@@ -77,11 +78,12 @@ function AppNavigator() {
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: Colors.background },
-          headerTintColor: Colors.textPrimary,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.primary,
+          headerTitleStyle: { fontWeight: '700', color: colors.primary },
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: Colors.background },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen
@@ -92,7 +94,11 @@ function AppNavigator() {
         <Stack.Screen
           name="ConfirmTransaction"
           component={ConfirmTransactionScreen}
-          options={{ title: 'Categorize' }}
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            animation: 'slide_from_bottom',
+          }}
         />
         <Stack.Screen
           name="TransactionDetail"
@@ -117,9 +123,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ModelProvider>
-        <AppNavigator />
-      </ModelProvider>
+      <ThemeProvider>
+        <ModelProvider>
+          <AppNavigator />
+        </ModelProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

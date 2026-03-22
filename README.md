@@ -30,13 +30,9 @@ To make it permanent, add `JAVA_HOME` to your System Environment Variables.
 npx expo run:android
 ```
 
-First build takes ~20-30 minutes. After that, just start the dev server:
+First build takes ~20-30 minutes. Use this same command every time — it only rebuilds what changed.
 
-```bash
-npx expo start
-```
-
-Press `a` to open on the emulator/device.
+> **Note:** `npx expo start` alone will NOT work. This app uses native modules (RunAnywhere SDK) that require a custom dev client, so always use `npx expo run:android`.
 
 ### 4. Web preview (limited — no AI features)
 

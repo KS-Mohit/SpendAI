@@ -17,10 +17,18 @@ export default function TotalHeader({
   period,
   onPeriodChange,
 }: TotalHeaderProps) {
+  const formatted = total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const [whole, decimal] = formatted.split('.');
+
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Total Spending</Text>
-      <Text style={styles.amount}>₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+      <Text style={styles.label}>TOTAL OUTFLOW</Text>
+      <View style={styles.amountRow}>
+        <Text style={styles.amount}>
+          ₹{whole}
+          <Text style={styles.amountDecimal}>.{decimal}</Text>
+        </Text>
+      </View>
       <View style={styles.toggleRow}>
         {PERIODS.map((p) => (
           <TouchableOpacity
@@ -46,49 +54,59 @@ export default function TotalHeader({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.onSurfaceVariant,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   amount: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginTop: 2,
+    fontSize: 48,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: -2,
     marginBottom: 16,
-    letterSpacing: -1,
+  },
+  amountDecimal: {
+    color: Colors.surfaceContainerHighest,
+    fontSize: 36,
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.backgroundMuted,
-    borderRadius: 10,
-    padding: 3,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 24,
+    padding: 4,
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: 7,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 20,
   },
   toggleActive: {
-    backgroundColor: Colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   toggleText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textMuted,
+    fontWeight: '600',
+    color: Colors.onSurfaceVariant,
   },
   toggleTextActive: {
-    color: Colors.textPrimary,
-    fontWeight: '600',
+    color: Colors.onPrimary,
+    fontWeight: '700',
   },
 });

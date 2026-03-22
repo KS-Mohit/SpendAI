@@ -1,100 +1,93 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CATEGORIES } from '../constants/categories';
-import { Colors } from '../theme/colors';
+import { useColors } from '../theme/ThemeContext';
+import { ColorScheme } from '../theme/colors';
 
 interface CategoryPickerProps {
   selected: string | null;
-  suggestion: string | null;
-  confidence: number | null;
   onSelect: (category: string) => void;
+  suggestion?: string | null;
+  confidence?: number | null;
 }
 
 export default function CategoryPicker({
   selected,
-  suggestion,
-  confidence,
   onSelect,
 }: CategoryPickerProps) {
-  function getButtonStyle(key: string) {
-    if (selected === key) {
-      return [styles.button, styles.buttonSelected];
-    }
-    if (suggestion === key && confidence !== null) {
-      if (confidence > 70) {
-        return [styles.button, styles.buttonHighlight];
-      }
-      if (confidence >= 40) {
-        return [styles.button, styles.buttonFaint];
-      }
-    }
-    return [styles.button];
-  }
-
-  function getTextStyle(key: string) {
-    if (selected === key) {
-      return [styles.label, styles.labelSelected];
-    }
-    return [styles.label];
-  }
+  const { colors } = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.grid}>
-      {CATEGORIES.map((cat) => (
-        <TouchableOpacity
-          key={cat.key}
-          style={getButtonStyle(cat.key)}
-          onPress={() => onSelect(cat.key)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.icon}>{cat.icon}</Text>
-          <Text style={getTextStyle(cat.key)}>{cat.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {CATEGORIES.map((cat) => {
+        const isSelected = selected === cat.key;
+        return (
+          <TouchableOpacity
+            key={cat.key}
+            style={[styles.button, isSelected && styles.buttonSelected]}
+            onPress={() => onSelect(cat.key)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconCircle, isSelected && styles.iconCircleSelected]}>
+              <Text style={styles.icon}>{cat.icon}</Text>
+            </View>
+            <Text style={[styles.label, isSelected && styles.labelSelected]}>
+              {cat.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  button: {
-    width: '30%',
-    aspectRatio: 1.2,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  buttonSelected: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  buttonHighlight: {
-    borderColor: Colors.accent,
-    borderWidth: 2,
-  },
-  buttonFaint: {
-    borderColor: Colors.textMuted,
-    borderStyle: 'dashed',
-  },
-  icon: {
-    fontSize: 24,
-    marginBottom: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-  },
-  labelSelected: {
-    color: Colors.background,
-  },
-});
+function createStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    button: {
+      width: '30%',
+      alignItems: 'center',
+      paddingVertical: 12,
+      gap: 8,
+    },
+    buttonSelected: {},
+    iconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      backgroundColor: c.surfaceContainerLowest,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    iconCircleSelected: {
+      backgroundColor: c.primaryContainer,
+      borderWidth: 2,
+      borderColor: c.primary,
+    },
+    icon: {
+      fontSize: 24,
+    },
+    label: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: c.onSurfaceVariant,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    labelSelected: {
+      color: c.primary,
+      fontWeight: '700',
+    },
+  });
+}

@@ -8,7 +8,7 @@ import React, {
 
 import { Platform } from 'react-native';
 
-// Set to true when testing on x86_64 emulator (native LLM crashes on emulator)
+// Set to true when testing on x86_64 emulator (native LLM is 10-50x slower via ARM emulation)
 const FORCE_MOCK_LLM = false;
 
 // RunAnywhere imports — only available on native (Android/iOS)
@@ -35,11 +35,11 @@ if (Platform.OS !== 'web') {
 }
 
 // ── Model IDs ──
-const LLM_MODEL_ID = 'lfm2-350m-q4_k_m';
-const LLM_MODEL_NAME = 'LFM2 350M Q4_K_M';
+const LLM_MODEL_ID = 'qwen2.5-0.5b-instruct-q8_0';
+const LLM_MODEL_NAME = 'Qwen2.5 0.5B Instruct Q8_0';
 const LLM_MODEL_URL =
-  'https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q4_K_M.gguf';
-const LLM_MODEL_MEMORY = 250_000_000;
+  'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf';
+const LLM_MODEL_MEMORY = 700_000_000;
 
 const STT_MODEL_ID = 'sherpa-onnx-whisper-tiny.en';
 const STT_MODEL_NAME = 'Sherpa Whisper Tiny (ONNX)';
@@ -97,53 +97,70 @@ export function useModel() {
   return useContext(ModelContext);
 }
 
-/** Web-only: generate mock AI responses by parsing the prompt for transaction data */
+/** Mock AI responses by parsing the pre-computed spending summary from the prompt */
 function webMockGenerate(prompt: string): string {
-  // Try to extract transaction JSON from the prompt
-  const jsonMatch = prompt.match(/Transactions:\s*(\[[\s\S]*?\])/);
-  if (!jsonMatch) {
-    return 'I can see your spending data. Try asking about specific categories, time periods, or spending patterns.';
+  // Extract spending summary from the new prompt format
+  const summaryMatch = prompt.match(/Spending data:\s*(.*?)(?:\n|$)/s);
+  const questionMatch = prompt.match(/User question:\s*(.*?)$/s);
+  const question = (questionMatch?.[1] ?? prompt).toLowerCase();
+  const summary = summaryMatch?.[1] ?? '';
+
+  // Parse total and breakdown from summary like:
+  // "Total spending: ₹5,400 across 11 transactions. Breakdown: food: ₹2,450 (45%), travel: ₹1,200 (22%), ..."
+  const totalMatch = summary.match(/Total spending:\s*₹([\d,]+)/);
+  const txCountMatch = summary.match(/across\s+(\d+)\s+transactions/);
+  const total = totalMatch ? totalMatch[1] : '0';
+  const txCount = txCountMatch ? txCountMatch[1] : '0';
+
+  // Parse category breakdown
+  const breakdownMatch = summary.match(/Breakdown:\s*(.*)/);
+  const breakdownStr = breakdownMatch?.[1] ?? '';
+  const categories = [...breakdownStr.matchAll(/(\w+):\s*₹([\d,]+)\s*\((\d+)%\)/g)].map(m => ({
+    name: m[1],
+    amount: m[2],
+    pct: m[3],
+  }));
+
+  if (categories.length === 0) {
+    return 'I don\'t see any spending data yet. Add some transactions first, then I can help analyze your spending.';
   }
 
-  try {
-    const txs: { amount: number; category: string; date: string; note?: string }[] =
-      JSON.parse(jsonMatch[1]);
-    const total = txs.reduce((s, t) => s + t.amount, 0);
-    const categories: Record<string, number> = {};
-    txs.forEach((t) => {
-      categories[t.category] = (categories[t.category] || 0) + t.amount;
-    });
-    const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-    const topCat = sorted[0];
-    const question = prompt.toLowerCase();
+  const topCat = categories[0];
 
-    if (question.includes('food')) {
-      const foodTotal = categories['food'] ?? 0;
-      return `You spent ₹${foodTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} on food across ${txs.filter((t) => t.category === 'food').length} transactions. ${foodTotal > total * 0.3 ? 'That\'s over 30% of your total spending — consider cooking more at home.' : 'That\'s a reasonable portion of your budget.'}`;
+  if (question.includes('food')) {
+    const food = categories.find(c => c.name === 'food');
+    if (food) {
+      return `You spent ₹${food.amount} on food, which is ${food.pct}% of your total spending of ₹${total}. ${parseInt(food.pct) > 30 ? 'That\'s a significant portion — consider cooking more at home to save.' : 'That\'s a reasonable portion of your budget.'}`;
     }
-
-    if (question.includes('biggest') || question.includes('most') || question.includes('top')) {
-      return `Your biggest spending category is ${topCat[0]} at ₹${topCat[1].toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${Math.round((topCat[1] / total) * 100)}% of total). ${sorted.length > 1 ? `Followed by ${sorted[1][0]} at ₹${sorted[1][1].toLocaleString('en-IN', { minimumFractionDigits: 2 })}.` : ''}`;
-    }
-
-    if (question.includes('optim') || question.includes('cut') || question.includes('save') || question.includes('reduce')) {
-      return `Your total spending is ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}. Your top category is ${topCat[0]} (₹${topCat[1].toLocaleString('en-IN', { minimumFractionDigits: 2 })}). Consider setting a weekly budget for ${topCat[0]} and tracking it daily. Small reductions of 10-15% in your top 2 categories could save you ₹${Math.round(total * 0.12).toLocaleString('en-IN')} per period.`;
-    }
-
-    if (question.includes('night') || question.includes('late')) {
-      return `Based on your transaction timestamps, I can see spending across different times of day. To optimize, try planning purchases during daytime hours and avoiding impulse late-night orders.`;
-    }
-
-    if (question.includes('summary') || question.includes('overview')) {
-      const catList = sorted.map(([c, v]) => `${c}: ₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`).join(', ');
-      return `You have ${txs.length} transactions totaling ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}. Breakdown: ${catList}.`;
-    }
-
-    // Default
-    return `You have ${txs.length} transactions totaling ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}. Your top spending category is ${topCat[0]} at ₹${topCat[1].toLocaleString('en-IN', { minimumFractionDigits: 2 })}. Ask me about specific categories, spending habits, or optimization tips!`;
-  } catch {
-    return 'I can analyze your spending data. Try asking about specific categories, time periods, or how to optimize your budget.';
+    return `I don't see any food-related spending in your current transactions.`;
   }
+
+  if (question.includes('biggest') || question.includes('most') || question.includes('top') || question.includes('spend')) {
+    let response = `Your biggest spending category is ${topCat.name} at ₹${topCat.amount} (${topCat.pct}% of total ₹${total}).`;
+    if (categories.length > 1) {
+      response += ` Followed by ${categories[1].name} at ₹${categories[1].amount} (${categories[1].pct}%).`;
+    }
+    if (categories.length > 2) {
+      response += ` Then ${categories[2].name} at ₹${categories[2].amount} (${categories[2].pct}%).`;
+    }
+    return response;
+  }
+
+  if (question.includes('optim') || question.includes('cut') || question.includes('save') || question.includes('reduce')) {
+    return `Your total spending is ₹${total} across ${txCount} transactions. Your top category is ${topCat.name} (₹${topCat.amount}, ${topCat.pct}%). Consider setting a weekly budget for ${topCat.name} and tracking it daily. Even a 10-15% reduction in your top 2 categories could make a noticeable difference.`;
+  }
+
+  if (question.includes('summary') || question.includes('overview') || question.includes('break')) {
+    const catList = categories.map(c => `${c.name}: ₹${c.amount} (${c.pct}%)`).join(', ');
+    return `You have ${txCount} transactions totaling ₹${total}. Breakdown: ${catList}.`;
+  }
+
+  if (question.includes('night') || question.includes('late')) {
+    return `Based on your transactions, try planning purchases during daytime hours and avoiding impulse late-night orders to optimize your spending.`;
+  }
+
+  // Default — give a useful overview
+  return `You have ${txCount} transactions totaling ₹${total}. Your top category is ${topCat.name} at ₹${topCat.amount} (${topCat.pct}%).${categories.length > 1 ? ` Next is ${categories[1].name} at ₹${categories[1].amount} (${categories[1].pct}%).` : ''} Ask me about specific categories, spending habits, or tips to save!`;
 }
 
 export function ModelProvider({ children }: { children: React.ReactNode }) {
@@ -291,7 +308,7 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
 
       const streamResult = await RunAnywhere.generateStream(prompt, {
         maxTokens,
-        temperature: 0.8,
+        temperature: 0.3,
       });
 
       let response = '';

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getCategoryByKey } from '../constants/categories';
-import { Colors } from '../theme/colors';
+import { useColors } from '../theme/ThemeContext';
+import { ColorScheme } from '../theme/colors';
 
 interface TransactionRowProps {
   category: string;
@@ -11,6 +12,28 @@ interface TransactionRowProps {
   onPress?: () => void;
 }
 
+function getCategoryColors(c: ColorScheme): Record<string, string> {
+  return {
+    food: c.primaryContainer,
+    travel: c.secondaryContainer,
+    bills: c.tertiaryContainer,
+    shopping: c.primaryContainer,
+    entertainment: c.secondaryContainer,
+    other: c.surfaceContainerHigh,
+  };
+}
+
+function getCategoryTextColors(c: ColorScheme): Record<string, string> {
+  return {
+    food: c.onPrimaryContainer,
+    travel: c.onSecondaryContainer,
+    bills: c.onTertiaryContainer,
+    shopping: c.onPrimaryContainer,
+    entertainment: c.onSecondaryContainer,
+    other: c.onSurface,
+  };
+}
+
 export default function TransactionRow({
   category,
   name,
@@ -18,81 +41,80 @@ export default function TransactionRow({
   amount,
   onPress,
 }: TransactionRowProps) {
+  const { colors } = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const cat = getCategoryByKey(category);
-  const icon = cat?.icon ?? '➕';
+  const icon = cat?.icon ?? '\u2795';
+  const bgColor = getCategoryColors(colors)[category] ?? colors.surfaceContainerHigh;
 
   return (
-    <View style={styles.row}>
-      <TouchableOpacity
-        style={styles.leftSide}
-        onPress={onPress}
-        activeOpacity={0.6}
-        disabled={!onPress}
-      >
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>{icon}</Text>
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {name}
-          </Text>
-          <Text style={styles.date}>{date}</Text>
-        </View>
-      </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.row}
+      onPress={onPress}
+      activeOpacity={0.7}
+      disabled={!onPress}
+    >
+      <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
+        <Text style={styles.icon}>{icon}</Text>
+      </View>
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
+        <Text style={styles.date}>{cat?.label ? `${cat.label} \u2022 ${date}` : date}</Text>
+      </View>
       <Text style={styles.amount}>
-        ₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        - {'\u20b9'}{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingRight: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  leftSide: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  info: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    letterSpacing: -0.2,
-  },
-  date: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  amount: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-    letterSpacing: -0.3,
-    marginLeft: 12,
-    flexShrink: 0,
-  },
-});
+function createStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: c.surfaceContainerLow,
+      borderRadius: 16,
+      marginBottom: 8,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 14,
+    },
+    icon: {
+      fontSize: 20,
+    },
+    info: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.onSurface,
+      letterSpacing: -0.2,
+    },
+    date: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: c.onSurfaceVariant,
+      marginTop: 3,
+    },
+    amount: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.onSurface,
+      letterSpacing: -0.3,
+      marginLeft: 12,
+      flexShrink: 0,
+    },
+  });
+}
