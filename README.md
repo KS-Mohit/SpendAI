@@ -21,6 +21,7 @@ Every finance app today uploads your transaction data to the cloud. SpendAI take
 ---
 
 ## Promotional Website
+
 Check out our Promotional Website: [**SpendAI**](https://spendai-ttkb.vercel.app/)
 
 ---
@@ -28,12 +29,14 @@ Check out our Promotional Website: [**SpendAI**](https://spendai-ttkb.vercel.app
 ## Features
 
 ### Expense Tracking
+
 - **Manual Entry** — add expenses with numeric input and category picker
 - **Transaction History** — view, edit, and delete past expenses grouped by date
 - **SMS Auto-Detection** — listens for bank transaction SMS, auto-extracts amounts
 - **AI Categorization** — on-device LLM suggests expense categories
 
 ### Financial Intelligence
+
 - **AI Chat** — natural language questions about your spending ("How much on food this week?")
 - **Budget Planning** — set monthly budgets per category with real-time progress tracking
 - **Health Score** — financial health metric based on spending diversity, consistency, and budget adherence
@@ -42,6 +45,7 @@ Check out our Promotional Website: [**SpendAI**](https://spendai-ttkb.vercel.app
 - **Income Analysis** — set your salary for savings rate and remaining budget calculations
 
 ### Voice Mode
+
 - **Push-to-Talk** — tap mic, speak your question, tap stop
 - **Editable Transcription** — review and correct before sending
 - **Spoken Responses** — AI reads answers aloud
@@ -53,11 +57,11 @@ Check out our Promotional Website: [**SpendAI**](https://spendai-ttkb.vercel.app
 
 All models download automatically on first launch (~500 MB total) and are cached permanently:
 
-| Model | Purpose | Engine | Memory |
-|-------|---------|--------|--------|
-| **Qwen2.5 0.5B Instruct** (Q8_0 GGUF) | Chat, categorization, spending analysis | LlamaCPP | 700 MB |
-| **Whisper Base English** (ONNX) | Speech-to-Text (16kHz mono) | Sherpa-ONNX | 150 MB |
-| **Piper Lessac Medium** (ONNX) | Text-to-Speech (US English) | Sherpa-ONNX | 65 MB |
+| Model                                 | Purpose                                 | Engine      | Memory |
+| ------------------------------------- | --------------------------------------- | ----------- | ------ |
+| **Qwen2.5 0.5B Instruct** (Q8_0 GGUF) | Chat, categorization, spending analysis | LlamaCPP    | 700 MB |
+| **Whisper Base English** (ONNX)       | Speech-to-Text (16kHz mono)             | Sherpa-ONNX | 150 MB |
+| **Piper Lessac Medium** (ONNX)        | Text-to-Speech (US English)             | Sherpa-ONNX | 65 MB  |
 
 - LLM inference: temperature 0.3, max 150 tokens, prompt capped at ~1900 chars for fast response
 - STT: Whisper Base provides 23% lower word error rate vs Tiny, still real-time on mobile
@@ -73,19 +77,19 @@ All models download automatically on first launch (~500 MB total) and are cached
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Expo ~55.0.8 / React Native 0.83.2 |
-| Navigation | React Navigation 7 (Native Stack) |
-| Database | expo-sqlite (on-device) |
-| AI Runtime | RunAnywhere SDK ^0.18.1 |
-| LLM | @runanywhere/llamacpp (Qwen2.5 GGUF) |
-| STT / TTS | @runanywhere/onnx (Whisper + Piper) |
-| Voice Recording | react-native-live-audio-stream |
-| TTS Playback | react-native-sound |
-| SMS Detection | react-native-sms-listener |
-| Icons | MaterialCommunityIcons |
-| Language | TypeScript ~5.9.2 |
+| Layer           | Technology                           |
+| --------------- | ------------------------------------ |
+| Framework       | Expo ~55.0.8 / React Native 0.83.2   |
+| Navigation      | React Navigation 7 (Native Stack)    |
+| Database        | expo-sqlite (on-device)              |
+| AI Runtime      | RunAnywhere SDK ^0.18.1              |
+| LLM             | @runanywhere/llamacpp (Qwen2.5 GGUF) |
+| STT / TTS       | @runanywhere/onnx (Whisper + Piper)  |
+| Voice Recording | react-native-live-audio-stream       |
+| TTS Playback    | react-native-sound                   |
+| SMS Detection   | react-native-sms-listener            |
+| Icons           | MaterialCommunityIcons               |
+| Language        | TypeScript ~5.9.2                    |
 
 ---
 
@@ -134,7 +138,7 @@ hackxtreme/
 # 1. Install dependencies
 npm install
 
-# 2. Set JAVA_HOME 
+# 2. Set JAVA_HOME
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 
 # 3. Build and run
@@ -143,25 +147,25 @@ npx expo run:android
 
 ## Version Constraints
 
-| Dependency | Required | Reason |
-|-----------|----------|--------|
-| react-native-nitro-modules | 0.31.10 | RunAnywhere SDK compatibility |
-| Gradle | 8.13 | Gradle 9.0+ causes build errors |
+| Dependency                 | Required | Reason                          |
+| -------------------------- | -------- | ------------------------------- |
+| react-native-nitro-modules | 0.31.10  | RunAnywhere SDK compatibility   |
+| Gradle                     | 8.13     | Gradle 9.0+ causes build errors |
 
 ---
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `react-native-sound not available` | Run `npx expo run:android` for a full native rebuild |
-| LLM slow on emulator | Expected — use a real device for best performance |
-| Models not downloading | Check internet; `adb logcat \| grep SpendAI` for progress |
-| App crashes on launch | Must use dev client build (`npx expo run:android`), not Expo Go |
+| Problem                            | Solution                                                        |
+| ---------------------------------- | --------------------------------------------------------------- |
+| `react-native-sound not available` | Run `npx expo run:android` for a full native rebuild            |
+| LLM slow on emulator               | Expected — use a real device for best performance               |
+| Models not downloading             | Check internet; `adb logcat \| grep SpendAI` for progress       |
+| App crashes on launch              | Must use dev client build (`npx expo run:android`), not Expo Go |
 
 ---
 
-## Team 
+## Team
 
 - **Paras Saxena**
 - **Sunil Sharma**
@@ -169,4 +173,4 @@ npx expo run:android
 
 ---
 
-*All AI inference runs on-device. No data leaves your phone. Ever.*
+_All AI inference runs on-device. No data leaves your phone. Ever._
