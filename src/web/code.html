@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpendAI — Your Money. Your Data. Your Device.</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary-fixed-variant": "#005227",
+                        "surface-tint": "#4de082",
+                        "outline": "#869486",
+                        "on-tertiary-container": "#794418",
+                        "on-background": "#e5e2e1",
+                        "surface-container-low": "#1c1b1b",
+                        "on-tertiary-fixed-variant": "#6c3a0f",
+                        "on-secondary": "#003827",
+                        "on-secondary-fixed-variant": "#00513a",
+                        "background": "#0A0A0A",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#80f9c8",
+                        "on-tertiary": "#4f2500",
+                        "surface": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "on-secondary-container": "#003121",
+                        "tertiary": "#ffd9c1",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#353534",
+                        "primary": "#6bfb9a",
+                        "secondary": "#62dcad",
+                        "error": "#ffb4ab",
+                        "inverse-on-surface": "#313030",
+                        "surface-container-high": "#2a2a2a",
+                        "on-primary-container": "#005e2d",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-fixed-dim": "#4de082",
+                        "on-tertiary-fixed": "#301400",
+                        "tertiary-container": "#ffb47f",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdcc6",
+                        "secondary-fixed-dim": "#62dcad",
+                        "secondary-container": "#18a479",
+                        "surface-container": "#201f1f",
+                        "tertiary-fixed-dim": "#ffb784",
+                        "on-surface-variant": "#bccabb",
+                        "inverse-surface": "#e5e2e1",
+                        "primary-fixed": "#6dfe9c",
+                        "on-primary-fixed": "#00210c",
+                        "surface-variant": "#353534",
+                        "on-primary": "#003919",
+                        "primary-container": "#4ade80",
+                        "on-secondary-fixed": "#002115",
+                        "outline-variant": "#3d4a3e",
+                        "surface-dim": "#131313",
+                        "surface-bright": "#3a3939",
+                        "inverse-primary": "#006d36"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0A0A0A; color: #FFFFFF; scroll-behavior: smooth; }
+        .glass { background: rgba(19, 19, 19, 0.6); backdrop-filter: blur(20px); }
+        .bloom-sm { box-shadow: 0 0 15px rgba(74, 222, 128, 0.05); }
+        .bloom-lg { box-shadow: 0 0 40px rgba(74, 222, 128, 0.1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Realistic Phone Mockup Enhancements */
+        .phone-mockup { 
+            width: 280px; 
+            height: 580px; 
+            border: 12px solid #1a1a1a; 
+            border-radius: 3.5rem; 
+            position: relative; 
+            overflow: hidden; 
+            background: #0e0e0e; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 2px 2px rgba(255, 255, 255, 0.05);
+        }
+        .phone-mockup::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .phone-notch { 
+            width: 120px; 
+            height: 30px; 
+            background: #1a1a1a; 
+            position: absolute; 
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            border-bottom-left-radius: 1.5rem; 
+            border-bottom-right-radius: 1.5rem; 
+            z-index: 25; 
+        }
+        .phone-button {
+            position: absolute;
+            background: #1a1a1a;
+            border-radius: 2px;
+        }
+        .side-button-l { left: -14px; top: 100px; width: 4px; height: 50px; }
+        .side-button-r { right: -14px; top: 150px; width: 4px; height: 80px; }
+
+        .amber-glow {
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.1);
+        }
+    </style>
+</head>
+<body class="selection:bg-primary selection:text-on-primary">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl dark:bg-[#131313]/60 shadow-[0_0_15px_rgba(74,222,128,0.05)]">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto font-['Inter'] antialiased tracking-tight">
+<div class="text-2xl font-black tracking-tighter text-[#4ADE80]">SpendAI</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-gray-400 dark:text-[#9CA3AF] hover:text-[#FFFFFF] transition-all duration-300" href="#features">Features</a>
+<a class="text-gray-400 dark:text-[#9CA3AF] hover:text-[#FFFFFF] transition-all duration-300" href="#how-it-works">How It Works</a>
+<a class="text-gray-400 dark:text-[#9CA3AF] hover:text-[#FFFFFF] transition-all duration-300" href="#impulse">Impulse AI</a>
+<a class="text-gray-400 dark:text-[#9CA3AF] hover:text-[#FFFFFF] transition-all duration-300" href="#ai-stack">AI Stack</a>
+<a class="text-gray-400 dark:text-[#9CA3AF] hover:text-[#FFFFFF] transition-all duration-300" href="#privacy">Privacy</a>
+</div>
+<a class="bg-primary-container text-on-primary px-5 py-2 rounded-xl font-semibold hover:opacity-90 transition-all flex items-center gap-2" href="https://github.com/KS-Mohit/SpendAI" target="_blank">
+            View on GitHub
+        </a>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="pt-32 pb-20 px-6 max-w-7xl mx-auto overflow-hidden">
+<div class="grid lg:grid-cols-2 gap-16 items-center">
+<div class="space-y-8">
+<div class="flex flex-wrap gap-3">
+<span class="bg-surface-container-high px-3 py-1 rounded-full text-[0.6875rem] font-bold uppercase tracking-widest text-primary border border-outline-variant/30">On-Device AI</span>
+<span class="bg-surface-container-high px-3 py-1 rounded-full text-[0.6875rem] font-bold uppercase tracking-widest text-primary border border-outline-variant/30">Privacy-First</span>
+<span class="bg-surface-container-high px-3 py-1 rounded-full text-[0.6875rem] font-bold uppercase tracking-widest text-primary border border-outline-variant/30">Zero Cloud</span>
+</div>
+<h1 class="text-6xl md:text-7xl font-black tracking-tighter leading-tight text-white">
+                Your Money.<br/>Your Data.<br/><span class="text-primary">Your Device.</span>
+</h1>
+<p class="text-xl text-on-surface-variant max-w-lg leading-relaxed">
+                AI-powered expense tracking that runs 100% on your phone — no cloud, no compromise. Take control of your financial life with complete privacy.
+            </p>
+<div class="flex flex-wrap gap-4 pt-4">
+<a class="bg-primary-container text-on-primary px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_20px_rgba(74,222,128,0.3)] transition-all" href="https://github.com/KS-Mohit/SpendAI">
+                    Get Started on GitHub
+                </a>
+<a class="border border-outline-variant text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-low transition-all" href="#features">
+                    See Features
+                </a>
+</div>
+</div>
+<!-- CSS Only Phone Mockup -->
+<div class="relative flex justify-center lg:justify-end">
+<div class="absolute -z-10 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+<!-- Floating Stats -->
+<div class="absolute top-20 -left-10 z-30 bg-surface-container-high p-4 rounded-2xl bloom-sm border border-outline-variant/20 animate-bounce transition-all duration-1000">
+<div class="text-[0.6875rem] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Health Score</div>
+<div class="text-2xl font-black text-primary">84/100</div>
+</div>
+<div class="absolute bottom-40 -right-4 z-30 bg-surface-container-high p-4 rounded-2xl bloom-sm border border-outline-variant/20 animate-pulse">
+<div class="text-[0.6875rem] uppercase tracking-widest text-on-surface-variant font-bold mb-1">On-Device</div>
+<div class="text-lg font-black text-white">100% Secure</div>
+</div>
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="phone-button side-button-l"></div>
+<div class="phone-button side-button-r"></div>
+<div class="p-6 pt-12 space-y-6">
+<div class="flex justify-between items-center">
+<span class="material-symbols-outlined text-on-surface-variant">menu</span>
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xs">JD</div>
+</div>
+<div class="space-y-1">
+<p class="text-[0.6875rem] text-on-surface-variant font-bold uppercase tracking-widest">Available Balance</p>
+<h2 class="text-3xl font-black text-white">₹20,499.40</h2>
+</div>
+<!-- Simple Chart -->
+<div class="h-32 flex items-end justify-between gap-1 pb-2">
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[40%]"></div>
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[60%]"></div>
+<div class="w-full bg-primary h-[90%] rounded-t-sm"></div>
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[50%]"></div>
+<div class="w-full bg-surface-container-highest rounded-t-sm h-[75%]"></div>
+<div class="w-full bg-primary/60 h-[30%] rounded-t-sm"></div>
+</div>
+<!-- Budget bars -->
+<div class="space-y-4">
+<div class="space-y-1">
+<div class="flex justify-between text-[0.6875rem] font-bold uppercase text-on-surface-variant">
+<span>Food &amp; Drinks</span>
+<span>70%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-[70%] h-full bg-primary"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[0.6875rem] font-bold uppercase text-on-surface-variant">
+<span>Transport</span>
+<span>35%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="w-[35%] h-full bg-secondary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Grid -->
+<section class="py-24 bg-surface-container-lowest" id="features">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-20 space-y-4">
+<h2 class="text-4xl md:text-5xl font-black tracking-tight text-white">Everything You Need, Nothing You Don't</h2>
+<p class="text-on-surface-variant max-w-2xl mx-auto">Focused on speed, intelligence, and ironclad security. The features that redefine expense tracking.</p>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="p-8 rounded-2xl bg-[#0D1117] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="sms">sms</span>
+<h3 class="text-xl font-bold text-white mb-3">Auto SMS Detection</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Automatically extract transaction details from your banking SMS safely on your device.</p>
+</div>
+<!-- Card 2 -->
+<div class="p-8 rounded-2xl bg-[#111827] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="psychology">psychology</span>
+<h3 class="text-xl font-bold text-white mb-3">AI Categorization</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">LFM2 model classifies transactions into categories with high precision without ever sending data to servers.</p>
+</div>
+<!-- Card 3 -->
+<div class="p-8 rounded-2xl bg-[#0D1117] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="keyboard_voice">keyboard_voice</span>
+<h3 class="text-xl font-bold text-white mb-3">Voice Assistant</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Log expenses using your voice. Powered by Whisper Tiny ONNX for real-time speech-to-text processing.</p>
+</div>
+<!-- Card 4 -->
+<div class="p-8 rounded-2xl bg-[#111827] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="analytics">analytics</span>
+<h3 class="text-xl font-bold text-white mb-3">Financial Health Score</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Get personalized insights and a dynamic score based on your spending habits and savings rate.</p>
+</div>
+<!-- Card 5 -->
+<div class="p-8 rounded-2xl bg-[#0D1117] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="track_changes">track_changes</span>
+<h3 class="text-xl font-bold text-white mb-3">Budget Goals</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Set smart limits for specific categories and get proactive notifications before you overspend.</p>
+</div>
+<!-- Card 6 -->
+<div class="p-8 rounded-2xl bg-[#111827] border border-outline-variant/20 hover:border-primary/50 transition-all group">
+<span class="material-symbols-outlined text-4xl text-primary mb-6 block" data-icon="monitoring">monitoring</span>
+<h3 class="text-xl font-bold text-white mb-3">Spending Analytics</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">High-definition charts and trend analysis that help you visualize where every rupee goes.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Impulse Spending Detection Section - REDESIGNED -->
+<section class="py-24 bg-background overflow-hidden" id="impulse">
+<div class="max-w-7xl mx-auto px-6">
+<div class="mb-16">
+<h2 class="text-5xl font-black text-white mb-4">Impulse Spending Detection</h2>
+<p class="text-xl text-on-surface-variant italic">AI that watches your patterns — and helps you break the bad ones.</p>
+</div>
+<div class="grid lg:grid-cols-12 gap-12 items-start">
+<!-- Left: Detection Mechanisms Modules -->
+<div class="lg:col-span-7 space-y-4">
+<div class="p-6 rounded-lg bg-[#0D1117] border-l-4 border-amber-500 border-y border-r border-outline-variant/10 hover:bg-[#151a22] transition-all cursor-default">
+<div class="flex gap-6 items-start">
+<div class="w-12 h-12 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-500 text-2xl">dark_mode</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-white mb-1">Danger Window Detection</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed">AI identifies your personal high-risk spending times — late nights, weekends, post-payday. Not just midnight, but YOUR specific patterns.</p>
+</div>
+</div>
+</div>
+<div class="p-6 rounded-lg bg-[#0D1117] border-l-4 border-amber-500 border-y border-r border-outline-variant/10 hover:bg-[#151a22] transition-all cursor-default">
+<div class="flex gap-6 items-start">
+<div class="w-12 h-12 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-500 text-2xl">warning</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-white mb-1">Friction Prompt</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed">When a transaction is logged during a danger window, a full-screen prompt asks: "It's 12:30 AM. You've spent ₹3,200 on food this week. Are you sure?"</p>
+</div>
+</div>
+</div>
+<div class="p-6 rounded-lg bg-[#0D1117] border-l-4 border-amber-500 border-y border-r border-outline-variant/10 hover:bg-[#151a22] transition-all cursor-default">
+<div class="flex gap-6 items-start">
+<div class="w-12 h-12 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-500 text-2xl">assignment</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-white mb-1">Weekly Smart Saver Report</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed">Every Monday: impulse spends last week, money saved vs previous week, your most tempting category, and one actionable tip.</p>
+</div>
+</div>
+</div>
+<div class="p-6 rounded-lg bg-[#0D1117] border-l-4 border-amber-500 border-y border-r border-outline-variant/10 hover:bg-[#151a22] transition-all cursor-default">
+<div class="flex gap-6 items-start">
+<div class="w-12 h-12 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-500 text-2xl">lightbulb</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-white mb-1">AI-Powered Advice</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed">On-device LLM analyzes your transaction history and gives personalized suggestions to reduce unnecessary spending.</p>
+</div>
+</div>
+</div>
+<div class="p-3 bg-primary/10 rounded-lg border border-primary/20 mt-8">
+<p class="text-[0.75rem] font-bold text-primary flex items-center justify-center gap-2 uppercase tracking-widest">
+<span class="material-symbols-outlined text-lg">target</span>
+                        Goal: Help users save money by making impulse spending visible, personal, and easy to change
+                    </p>
+</div>
+</div>
+<!-- Right: Focal Alert Point & Phone Integration -->
+<div class="lg:col-span-5 relative flex flex-col items-center">
+<!-- Smart Saver Alert Card (The Focal Point) -->
+<div class="w-full max-w-sm bg-[#0D1117] rounded-lg border border-outline-variant/20 amber-glow relative z-20 overflow-hidden mb-8">
+<div class="p-4 border-b border-outline-variant/10 flex items-center justify-between bg-black/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500 text-lg">dark_mode</span>
+<span class="text-[0.6875rem] font-black text-amber-500 uppercase tracking-[0.2em]">Smart Saver Alert</span>
+</div>
+</div>
+<div class="p-6 space-y-6">
+<!-- Transaction Detail -->
+<div class="flex flex-col items-center space-y-4">
+<div class="px-3 py-1 bg-white/5 rounded-full border border-white/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-[10px] text-red-500">alarm</span>
+<span class="text-[0.6rem] text-on-surface-variant font-medium">12:47 AM • <span class="text-white">Swiggy</span> • Food</span>
+</div>
+<div class="text-4xl font-black text-white">₹ 416.20</div>
+</div>
+<!-- Mini Chart -->
+<div class="h-16 flex items-end gap-1 px-4">
+<div class="w-full bg-white/5 h-1/4 rounded-sm"></div>
+<div class="w-full bg-white/5 h-2/4 rounded-sm"></div>
+<div class="w-full bg-white/5 h-1/4 rounded-sm"></div>
+<div class="w-full bg-white/5 h-3/4 rounded-sm"></div>
+<div class="w-full bg-amber-500/80 h-[95%] rounded-sm"></div>
+<div class="w-full bg-white/5 h-2/4 rounded-sm"></div>
+<div class="w-full bg-white/5 h-1/4 rounded-sm"></div>
+</div>
+<!-- Budget Warning Box -->
+<div class="p-4 rounded-lg bg-red-950/20 border border-red-500/30">
+<p class="text-[0.75rem] text-on-surface leading-relaxed">
+                                You've spent <span class="font-bold">₹2,813</span> on Food this week — <span class="text-red-400 font-bold">99% of your budget</span>. Late-night food orders account for 40% of your food spend.
+                            </p>
+</div>
+<!-- Actionable Tip Box -->
+<div class="p-4 rounded-lg bg-[#4ADE80]/10 border border-[#4ADE80]/30 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl">lightbulb</span>
+<p class="text-[0.75rem] text-primary font-bold">Try cooking tonight — you'll save ~₹400 and stay in budget!</p>
+</div>
+</div>
+</div>
+<!-- Subtle Phone Mockup underlying the alert as a background visual -->
+<div class="opacity-30 scale-90 origin-top pointer-events-none">
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="p-6 pt-12 space-y-4">
+<div class="h-4 w-24 bg-white/10 rounded-full"></div>
+<div class="h-8 w-40 bg-white/10 rounded-lg"></div>
+<div class="space-y-2 pt-8">
+<div class="h-20 bg-white/5 rounded-xl"></div>
+<div class="h-20 bg-white/5 rounded-xl"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- How It Works -->
+<section class="py-24 overflow-hidden" id="how-it-works">
+<div class="max-w-7xl mx-auto px-6">
+<h2 class="text-4xl md:text-5xl font-black tracking-tight text-white text-center mb-20">From SMS to Insight in Seconds</h2>
+<div class="relative">
+<!-- Connector Line -->
+<div class="absolute top-8 left-0 w-full h-0.5 bg-outline-variant/20 hidden lg:block"></div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-8 relative z-10">
+<!-- Steps 1-8 -->
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">1</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">Receive SMS</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">2</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">VAD Check</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">3</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">Extract Data</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">4</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">AI Classify</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">5</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">Categorize</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">6</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">Save SQLite</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-primary/30 group-hover:scale-110 transition-transform bloom-sm">
+<span class="text-xl font-bold text-primary">7</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-on-surface">Update Stats</p>
+</div>
+<div class="flex flex-col items-center text-center space-y-4 group">
+<div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center border border-primary group-hover:scale-110 transition-transform bloom-lg">
+<span class="text-xl font-bold text-on-primary">8</span>
+</div>
+<p class="text-[0.6875rem] font-black uppercase tracking-widest text-primary">Insights</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Stack Section -->
+<section class="py-24 bg-surface" id="ai-stack">
+<div class="max-w-4xl mx-auto px-6">
+<h2 class="text-4xl font-black text-white mb-12 text-center">On-Device AI — No Internet Required</h2>
+<div class="space-y-4">
+<!-- Models List -->
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-white">LFM2-350M</span>
+<span class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">350M PARAMS</span>
+</div>
+<p class="text-sm text-on-surface-variant">Core Logic &amp; Transaction Categorization</p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model Weight: 210MB</span>
+</div>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-white">Whisper Tiny ONNX</span>
+<span class="bg-secondary/10 text-secondary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-secondary/20">STT ENGINE</span>
+</div>
+<p class="text-sm text-on-surface-variant">High-fidelity voice-to-text processing on-chip</p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model Weight: 39MB</span>
+</div>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-white">Piper Lessac ONNX</span>
+<span class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">TTS ENGINE</span>
+</div>
+<p class="text-sm text-on-surface-variant">Natural voice feedback for financial queries</p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model Weight: 28MB</span>
+</div>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-white">Silero VAD</span>
+<span class="bg-secondary/10 text-secondary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-secondary/20">VOICE ACTIVITY</span>
+</div>
+<p class="text-sm text-on-surface-variant">Efficient silence and speech detection</p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model Weight: 2MB</span>
+</div>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<span class="text-lg font-bold text-white">RunAnywhere SDK</span>
+<span class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">RUNTIME</span>
+</div>
+<p class="text-sm text-on-surface-variant">Unified cross-platform model execution layer</p>
+</div>
+<div class="mt-4 md:mt-0">
+<span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Native Acceleration</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Privacy Section -->
+<section class="py-24 bg-surface-container-lowest" id="privacy">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<div class="inline-block p-6 bg-surface-container-high rounded-full border border-primary/20 bloom-lg mb-8">
+<span class="material-symbols-outlined text-6xl text-primary" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<h2 class="text-4xl md:text-5xl font-black text-white mb-4">Privacy by Architecture, Not by Policy</h2>
+<p class="text-on-surface-variant max-w-2xl mx-auto">We don't have a privacy policy because we don't have your data. It never leaves your phone.</p>
+</div>
+<div class="grid md:grid-cols-2 gap-6">
+<div class="p-10 rounded-3xl bg-surface-container-low border border-outline-variant/10">
+<h3 class="text-xl font-bold text-white mb-4">No Cloud Sync</h3>
+<p class="text-on-surface-variant">Traditional apps upload your transactions to their servers. SpendAI processes everything locally on your silicon.</p>
+</div>
+<div class="p-10 rounded-3xl bg-surface-container-low border border-outline-variant/10">
+<h3 class="text-xl font-bold text-white mb-4">End-to-End Local</h3>
+<p class="text-on-surface-variant">From SMS reading to AI categorization, every computation happens within the app's sandbox environment.</p>
+</div>
+<div class="p-10 rounded-3xl bg-surface-container-low border border-outline-variant/10">
+<h3 class="text-xl font-bold text-white mb-4">Open Source</h3>
+<p class="text-on-surface-variant">Don't take our word for it. Inspect the code on GitHub and verify that no network calls are being made.</p>
+</div>
+<div class="p-10 rounded-3xl bg-surface-container-low border border-outline-variant/10">
+<h3 class="text-xl font-bold text-white mb-4">Secure Storage</h3>
+<p class="text-on-surface-variant">Your data is stored in an encrypted SQLite database, protected by your phone's biometric security.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Screenshots Section -->
+<section class="py-24" id="screenshots">
+<div class="max-w-7xl mx-auto px-6">
+<h2 class="text-4xl font-black text-white mb-16 text-center">See It In Action</h2>
+<div class="flex overflow-x-auto gap-8 pb-12 no-scrollbar snap-x">
+<!-- Screen 1: Dashboard -->
+<div class="flex-shrink-0 snap-center">
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="phone-button side-button-l"></div>
+<div class="phone-button side-button-r"></div>
+<div class="p-5 pt-12 space-y-6">
+<div class="flex justify-between items-center"><span class="material-symbols-outlined">menu</span><div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-[0.6rem]">JD</div></div>
+<div class="space-y-4">
+<div class="bg-surface-container-high p-4 rounded-xl">
+<p class="text-[0.5rem] uppercase font-bold text-on-surface-variant">Monthly Spending</p>
+<p class="text-2xl font-black text-white">₹14,500</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[0.6rem] font-bold"><span class="text-on-surface-variant">Recent</span><span class="text-primary">See All</span></div>
+<div class="space-y-2">
+<div class="flex justify-between items-center p-2 bg-surface-container-low rounded-lg"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center"><span class="material-symbols-outlined text-sm text-secondary">shopping_bag</span></div><div class="text-[0.6rem]"><p class="font-bold text-white">Amazon</p><p class="text-on-surface-variant">Electronics</p></div></div><p class="text-[0.7rem] font-bold text-white">-₹2,499</p></div>
+<div class="flex justify-between items-center p-2 bg-surface-container-low rounded-lg"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"><span class="material-symbols-outlined text-sm text-primary">restaurant</span></div><div class="text-[0.6rem]"><p class="font-bold text-white">Swiggy</p><p class="text-on-surface-variant">Food</p></div></div><p class="text-[0.7rem] font-bold text-white">-₹450</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-center mt-6 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Dashboard</p>
+</div>
+<!-- Screen 2: New Expense -->
+<div class="flex-shrink-0 snap-center">
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="phone-button side-button-l"></div>
+<div class="phone-button side-button-r"></div>
+<div class="p-5 pt-12 space-y-8">
+<div class="flex items-center gap-4"><span class="material-symbols-outlined">arrow_back</span><h3 class="font-black text-sm">Manual Entry</h3></div>
+<div class="space-y-6">
+<div class="space-y-1"><p class="text-[0.6rem] uppercase font-bold text-on-surface-variant">Amount</p><div class="text-4xl font-black text-primary">₹0.00</div></div>
+<div class="space-y-4">
+<div class="p-3 bg-surface-container-high rounded-lg flex items-center gap-3"><span class="material-symbols-outlined text-on-surface-variant text-sm">category</span><p class="text-[0.7rem]">Select Category</p></div>
+<div class="p-3 bg-surface-container-high rounded-lg flex items-center gap-3"><span class="material-symbols-outlined text-on-surface-variant text-sm">notes</span><p class="text-[0.7rem]">Add Description</p></div>
+</div>
+<div class="grid grid-cols-3 gap-2 pt-4">
+<div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">1</div><div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">2</div><div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">3</div>
+<div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">4</div><div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">5</div><div class="h-10 bg-surface-container-low rounded flex items-center justify-center font-bold text-sm">6</div>
+</div>
+</div>
+</div>
+</div>
+<p class="text-center mt-6 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">New Expense</p>
+</div>
+<!-- Screen 3: AI Chat -->
+<div class="flex-shrink-0 snap-center">
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="phone-button side-button-l"></div>
+<div class="phone-button side-button-r"></div>
+<div class="p-5 pt-12 space-y-6">
+<div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-sm">smart_toy</span></div><div><p class="text-[0.6rem] font-black">Spend Assistant</p><p class="text-[0.5rem] text-secondary">On-Device AI Active</p></div></div>
+<div class="space-y-4 h-64 overflow-hidden">
+<div class="bg-surface-container-high p-3 rounded-2xl rounded-tl-none text-[0.6rem] max-w-[85%]">How can I help you manage your finances today?</div>
+<div class="bg-primary/20 p-3 rounded-2xl rounded-tr-none text-[0.6rem] max-w-[85%] ml-auto text-right">How much did I spend on food this week?</div>
+<div class="bg-surface-container-high p-3 rounded-2xl rounded-tl-none text-[0.6rem] max-w-[85%]">You've spent ₹2,840 on food this week across 5 transactions. That's 12% lower than last week!</div>
+</div>
+<div class="absolute bottom-6 left-5 right-5 flex gap-2">
+<div class="flex-1 bg-surface-container-high p-2.5 rounded-full text-[0.55rem] text-on-surface-variant flex items-center border border-white/5">Ask AI anything...</div>
+<div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-on-primary text-sm">mic</span></div>
+</div>
+</div>
+</div>
+<p class="text-center mt-6 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">AI Assistant</p>
+</div>
+<!-- Screen 4: Analytics -->
+<div class="flex-shrink-0 snap-center">
+<div class="phone-mockup">
+<div class="phone-notch"></div>
+<div class="phone-button side-button-l"></div>
+<div class="phone-button side-button-r"></div>
+<div class="p-5 pt-12 space-y-6">
+<h3 class="font-black text-center text-sm">Analytics</h3>
+<div class="flex justify-center py-4">
+<div class="w-36 h-36 rounded-full border-[10px] border-primary border-t-secondary border-l-surface-container-highest flex items-center justify-center shadow-inner">
+<div class="text-center">
+<p class="text-[0.45rem] uppercase font-bold text-on-surface-variant">Total Spent</p>
+<p class="text-xl font-black">₹32k</p>
+</div>
+</div>
+</div>
+<div class="space-y-4 pt-2">
+<div class="flex items-center gap-3 p-2 bg-white/5 rounded-lg"><div class="w-2 h-2 rounded-full bg-primary"></div><p class="text-[0.65rem] flex-1">Rent &amp; Utilities</p><p class="text-[0.65rem] font-bold">45%</p></div>
+<div class="flex items-center gap-3 p-2 bg-white/5 rounded-lg"><div class="w-2 h-2 rounded-full bg-secondary"></div><p class="text-[0.65rem] flex-1">Food &amp; Drinks</p><p class="text-[0.65rem] font-bold">30%</p></div>
+<div class="flex items-center gap-3 p-2 bg-white/5 rounded-lg"><div class="w-2 h-2 rounded-full bg-surface-container-highest"></div><p class="text-[0.65rem] flex-1">Entertainment</p><p class="text-[0.65rem] font-bold">25%</p></div>
+</div>
+</div>
+</div>
+<p class="text-center mt-6 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Deep Insights</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Tech Stack -->
+<section class="py-24 bg-surface-container-lowest border-t border-outline-variant/10">
+<div class="max-w-4xl mx-auto px-6">
+<h2 class="text-3xl font-black text-white text-center mb-16">Built With Modern Tools</h2>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-[#61DAFB]/10 flex items-center justify-center font-black text-[#61DAFB]">RX</div>
+<div><p class="text-sm font-bold text-white">Expo / React Native</p><p class="text-[0.65rem] text-on-surface-variant">Core UI Framework</p></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center font-black text-primary">SQ</div>
+<div><p class="text-sm font-bold text-white">SQLite</p><p class="text-[0.65rem] text-on-surface-variant">High-Performance Database</p></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center font-black text-secondary">RA</div>
+<div><p class="text-sm font-bold text-white">RunAnywhere SDK</p><p class="text-[0.65rem] text-on-surface-variant">On-Device AI Runtime</p></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center font-black text-primary">RN</div>
+<div><p class="text-sm font-bold text-white">React Navigation</p><p class="text-[0.65rem] text-on-surface-variant">Smooth Route Transitions</p></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center font-black text-secondary">SM</div>
+<div><p class="text-sm font-bold text-white">SMS Integration</p><p class="text-[0.65rem] text-on-surface-variant">Native SMS Access</p></div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center font-black text-primary">AU</div>
+<div><p class="text-sm font-bold text-white">Audio &amp; Speech</p><p class="text-[0.65rem] text-on-surface-variant">Real-time Voice Engine</p></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-[#0E0E0E] dark:bg-[#0E0E0E] w-full py-12 border-t border-[#3D4A3E]/30 flex flex-col items-center gap-6 w-full text-center">
+<div class="text-xl font-bold text-[#FFFFFF]">SpendAI</div>
+<p class="text-[#9CA3AF] text-sm max-w-sm leading-relaxed">The only expense tracker that understands your privacy is as important as your money.</p>
+<div class="flex gap-8">
+<a class="text-[#9CA3AF] hover:text-[#4ADE80] transition-colors uppercase text-[0.6875rem] tracking-widest font-['Inter']" href="https://github.com/KS-Mohit/SpendAI">GitHub</a>
+<a class="text-[#9CA3AF] hover:text-[#4ADE80] transition-colors uppercase text-[0.6875rem] tracking-widest font-['Inter']" href="#features">Documentation</a>
+<a class="text-[#9CA3AF] hover:text-[#4ADE80] transition-colors uppercase text-[0.6875rem] tracking-widest font-['Inter']" href="#">Architecture</a>
+</div>
+<div class="pt-8 w-full max-w-lg border-t border-outline-variant/10">
+<div class="text-[0.6875rem] uppercase tracking-widest font-['Inter'] text-[#4ADE80] flex justify-center gap-4">
+<span>100% On-Device</span>
+<span>·</span>
+<span>Zero Cloud</span>
+<span>·</span>
+<span>Privacy-First</span>
+</div>
+<p class="text-[0.6875rem] text-on-surface-variant mt-4 font-bold">Built at HackXtreme</p>
+</div>
+</footer>
+<script>
+    // Smooth scroll for nav links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if(target) {
+                target.scrollIntoView({
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+
+    // Simple Fade-in Observer
+    const observerOptions = {
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('opacity-100', 'translate-y-0');
+                entry.target.classList.remove('opacity-0', 'translate-y-10');
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('section').forEach(section => {
+        section.classList.add('transition-all', 'duration-1000', 'opacity-0', 'translate-y-10');
+        observer.observe(section);
+    });
+
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        const nav = document.querySelector('nav');
+        if (window.scrollY > 50) {
+            nav.classList.add('shadow-lg', 'py-2');
+            nav.classList.remove('py-4');
+        } else {
+            nav.classList.remove('shadow-lg', 'py-2');
+            nav.classList.add('py-4');
+        }
+    });
+</script>
+</body></html>
