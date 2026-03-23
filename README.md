@@ -20,6 +20,19 @@ Every finance app today uploads your transaction data to the cloud. SpendAI take
 
 ---
 
+## Built with RunAnywhere.ai
+
+This project deeply integrates the RunAnywhere SDK for on-device AI, enabling:
+
+- **Offline voice agent** — full STT → LLM → TTS pipeline runs locally on the phone
+- **Qwen2.5 0.5B model** — fast, efficient responses optimized for mobile devices
+- **Privacy-first** — all voice processing happens on-device, no cloud dependency
+- **Low-latency inference** — real-time conversational experience without network round-trips
+
+RunAnywhere powers the entire AI pipeline — from understanding your voice to generating intelligent financial insights to speaking answers back — making SpendAI reliable anywhere, even without internet.
+
+---
+
 ## Features
 
 ### Expense Tracking
