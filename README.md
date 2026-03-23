@@ -62,33 +62,7 @@ All models download automatically on first launch (~500 MB total) and are cached
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│                    App.tsx                       │
-│  SafeAreaProvider → ModelProvider →              │
-│  ThemeProvider → Navigation                     │
-└──────────────────────┬──────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-   Dashboard       Insights       Budget
-   (Spending       (AI Chat +     (Monthly
-    Overview)      Voice Mode)     Goals)
-        │              │
-        │         ┌────┴────┐
-        │      Text Chat  Voice Modal
-        │                   │
-        └───────────────────┘
-                │
-    ┌───────────┼───────────┐
-    │           │           │
- ModelService Database   RAGService
- (RunAnywhere) (SQLite)  (Financial
-    │                    Guidance)
- ┌──┼──┐
- │  │  │
-LLM STT TTS
-```
+![Architecture](assets/architecture.png)
 
 ---
 
