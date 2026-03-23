@@ -369,7 +369,7 @@ export default function InsightsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Finance AI</Text>
+          <Text style={styles.headerTitle}>SpendAI Assistant</Text>
           <Text style={styles.headerSubtitle}>
             {transactions.length} transactions
             {salary

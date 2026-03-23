@@ -6,13 +6,10 @@ export async function seedFakeData() {
   if (seeded) return;
   seeded = true;
 
-  // If there are too many transactions (duplicates from reloads), clear and re-seed
+  // Always clear and re-seed so relative dates (daysAgo) stay current
   const existing = await getAllTransactions();
-  if (existing.length > 0 && existing.length < 20) {
-    // Old seed data — clear and re-seed with expanded dataset
+  if (existing.length > 0) {
     await clearAllTransactions();
-  } else if (existing.length >= 20) {
-    return;
   }
 
   const now = new Date();

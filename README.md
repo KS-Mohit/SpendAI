@@ -1,171 +1,191 @@
-# SpendAI — On-Device Expense Tracker
+# SpendAI — Fully Offline AI Finance Assistant
 
-AI-powered expense tracker that runs entirely on-device. No cloud, no backend. Built with Expo + RunAnywhere SDK.
+> **Zero cloud. Zero data leaves your phone.**
+>
+> A privacy-first expense tracker powered entirely by on-device AI — LLM, speech-to-text, text-to-speech — all running locally on your phone's processor.
 
-## Prerequisites
+Built with **React Native (Expo)** and **RunAnywhere SDK** for the RunAnywhere Hackathon.
 
-- **Node.js** 18+ and npm
-- **Android Studio** with an emulator (e.g. Medium Phone API 36) or a physical Android device
-- **Java JDK** — Android Studio bundles one at `C:\Program Files\Android\Android Studio\jbr`
+---
 
-## Setup
+## Why SpendAI?
 
-### 1. Install dependencies
+Every finance app today uploads your transaction data to the cloud. SpendAI takes a fundamentally different approach:
 
-```bash
-npm install
+- **Complete privacy** — all AI runs on your phone, all data stays in local storage
+- **Works offline** — after initial model download, airplane mode works perfectly
+- **Voice-first** — ask about your spending with your voice, get spoken answers back
+- **Instant insights** — real-time spending analysis, budget tracking, and financial health scoring
+- **Smart detection** — auto-reads bank SMS and categorizes expenses with AI
+
+---
+
+## Features
+
+### Expense Tracking
+- **Manual Entry** — add expenses with numeric input and category picker
+- **Transaction History** — view, edit, and delete past expenses grouped by date
+- **SMS Auto-Detection** — listens for bank transaction SMS, auto-extracts amounts
+- **AI Categorization** — on-device LLM suggests expense categories
+
+### Financial Intelligence
+- **AI Chat** — natural language questions about your spending ("How much on food this week?")
+- **Budget Planning** — set monthly budgets per category with real-time progress tracking
+- **Health Score** — financial health metric based on spending diversity, consistency, and budget adherence
+- **Month-End Predictions** — forecasts total spending based on current trajectory
+- **Time-Aware Queries** — understands "today", "this week", "this month" and filters accordingly
+- **Income Analysis** — set your salary for savings rate and remaining budget calculations
+
+### Voice Mode
+- **Push-to-Talk** — tap mic, speak your question, tap stop
+- **Editable Transcription** — review and correct before sending
+- **Spoken Responses** — AI reads answers aloud
+- **Multi-turn Conversations** — continuous Q&A within voice modal
+
+---
+
+## On-Device AI Models
+
+All models download automatically on first launch (~500 MB total) and are cached permanently:
+
+| Model | Purpose | Engine | Memory |
+|-------|---------|--------|--------|
+| **Qwen2.5 0.5B Instruct** (Q8_0 GGUF) | Chat, categorization, spending analysis | LlamaCPP | 700 MB |
+| **Whisper Base English** (ONNX) | Speech-to-Text (16kHz mono) | Sherpa-ONNX | 150 MB |
+| **Piper Lessac Medium** (ONNX) | Text-to-Speech (US English) | Sherpa-ONNX | 65 MB |
+
+- LLM inference: temperature 0.3, max 150 tokens, prompt capped at ~1900 chars for fast response
+- STT: Whisper Base provides 23% lower word error rate vs Tiny, still real-time on mobile
+- TTS: Neural voice synthesis with direct native playback via react-native-sound
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│                    App.tsx                       │
+│  SafeAreaProvider → ModelProvider →              │
+│  ThemeProvider → Navigation                     │
+└──────────────────────┬──────────────────────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+   Dashboard       Insights       Budget
+   (Spending       (AI Chat +     (Monthly
+    Overview)      Voice Mode)     Goals)
+        │              │
+        │         ┌────┴────┐
+        │      Text Chat  Voice Modal
+        │                   │
+        └───────────────────┘
+                │
+    ┌───────────┼───────────┐
+    │           │           │
+ ModelService Database   RAGService
+ (RunAnywhere) (SQLite)  (Financial
+    │                    Guidance)
+ ┌──┼──┐
+ │  │  │
+LLM STT TTS
 ```
 
-### 2. Set JAVA_HOME (required every new terminal on Windows)
+---
 
-```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-```
+## Tech Stack
 
-To make it permanent, add `JAVA_HOME` to your System Environment Variables.
+| Layer | Technology |
+|-------|-----------|
+| Framework | Expo ~55.0.8 / React Native 0.83.2 |
+| Navigation | React Navigation 7 (Native Stack) |
+| Database | expo-sqlite (on-device) |
+| AI Runtime | RunAnywhere SDK ^0.18.1 |
+| LLM | @runanywhere/llamacpp (Qwen2.5 GGUF) |
+| STT / TTS | @runanywhere/onnx (Whisper + Piper) |
+| Voice Recording | react-native-live-audio-stream |
+| TTS Playback | react-native-sound |
+| SMS Detection | react-native-sms-listener |
+| Icons | MaterialCommunityIcons |
+| Language | TypeScript ~5.9.2 |
 
-### 3. Build and run on Android
-
-```bash
-npx expo run:android
-```
-
-First build takes ~20-30 minutes. Use this same command every time — it only rebuilds what changed.
-
-> **Note:** `npx expo start` alone will NOT work. This app uses native modules (RunAnywhere SDK) that require a custom dev client, so always use `npx expo run:android`.
-
-### 4. Web preview (limited — no AI features)
-
-```bash
-npx expo start --web
-```
-
-Press `w` — uses mock AI responses, no voice features.
-
-### Model Downloads
-
-On first launch the app automatically downloads 3 AI models (~340 MB total):
-
-| Model | Purpose | Size |
-|-------|---------|------|
-| LFM2-350M-Q4_K_M | LLM chat & expense analysis | ~238 MB |
-| sherpa-onnx-whisper-tiny.en | Speech-to-text | ~40 MB |
-| vits-piper-en_US-lessac-medium | Text-to-speech | ~60 MB |
-
-Watch `adb logcat | grep SpendAI` for download/load progress. Models are cached after the first download.
+---
 
 ## Project Structure
 
 ```
-src/
-├── services/          # Core logic — DB, AI, SMS, categories
-├── screens/           # Full-screen views
-├── components/        # Reusable UI pieces
-├── constants/         # Categories list
-├── theme/             # Colors
-└── types.ts           # Shared TypeScript types
-App.tsx                # Entry — providers, navigation, SMS listener
+hackxtreme/
+├── App.tsx                              # Entry — providers, navigation, SMS listener
+├── src/
+│   ├── screens/
+│   │   ├── DashboardScreen.tsx          # Home — totals, charts, transactions
+│   │   ├── InsightsScreen.tsx           # AI chat + voice mode
+│   │   ├── ConfirmTransactionScreen.tsx # Categorize detected transactions
+│   │   ├── TransactionDetailScreen.tsx  # Edit/delete transactions
+│   │   ├── BudgetScreen.tsx             # Monthly budgets per category
+│   │   └── DevScreen.tsx                # Testing & debug tools
+│   ├── services/
+│   │   ├── ModelService.tsx             # RunAnywhere SDK — LLM, STT, TTS
+│   │   ├── DatabaseService.ts           # SQLite CRUD (transactions + budgets)
+│   │   ├── CategoryService.ts           # AI response system + prompt engineering
+│   │   ├── RAGService.ts               # Financial guidance retrieval
+│   │   ├── SMSService.ts               # SMS listener + amount extraction
+│   │   ├── HealthScoreService.ts        # Financial health calculator
+│   │   └── PredictionService.ts         # Month-end spending forecast
+│   ├── components/                      # Reusable UI (charts, cards, pickers)
+│   ├── data/
+│   │   └── finance_guidance.json        # Financial tips corpus for RAG
+│   ├── constants/categories.ts          # Expense categories
+│   ├── context/CardExpandContext.tsx     # Shared UI state
+│   └── theme/                           # Light & dark color schemes
 ```
 
-## Key Files
+---
 
-| File | What it does |
-|------|-------------|
-| `services/ModelService.tsx` | RunAnywhere SDK init, downloads + loads LLM, STT, TTS, VAD models. Exposes `generate()`, `transcribe()`, `speak()`, `startListening()` via React Context |
-| `services/DatabaseService.ts` | SQLite CRUD for transactions. In-memory fallback on web |
-| `services/SMSService.ts` | Listens for incoming SMS, extracts amounts via regex. `fireTestSMS()` for testing |
-| `services/CategoryService.ts` | Builds LLM prompts for categorization and chat |
-| `services/seedData.ts` | Populates fake transactions for development |
-| `screens/DashboardScreen.tsx` | Main screen — totals, chart, transaction list |
-| `screens/InsightsScreen.tsx` | AI chat — financial analysis, voice input/output, salary modal |
-| `screens/ConfirmTransactionScreen.tsx` | Categorize a detected transaction with AI suggestion |
-| `screens/DevScreen.tsx` | Fire test SMS templates, view model status |
+## Getting Started
 
-## How to Make Changes
+### Prerequisites
 
-### Adding a new screen
+- Node.js 18+
+- Android Studio with emulator or physical Android device
+- Java JDK (bundled with Android Studio)
 
-1. Create `src/screens/YourScreen.tsx`
-2. Add the route to `RootStackParamList` in `src/types.ts`
-3. Add `<Stack.Screen>` in `App.tsx`
+### Setup
 
-### Adding a new category
+```bash
+# 1. Install dependencies
+npm install
 
-Edit `src/constants/categories.ts` — add an entry to the `CATEGORIES` array. The rest of the app reads from this array automatically.
+# 2. Set JAVA_HOME 
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 
-### Changing LLM prompts
+# 3. Build and run
+npx expo run:android
+```
 
-All prompts live in `src/services/CategoryService.ts`. Edit the system/user prompt strings there. The chat prompt is `buildChatPrompt()`.
+## Version Constraints
 
-### Modifying the database schema
+| Dependency | Required | Reason |
+|-----------|----------|--------|
+| react-native-nitro-modules | 0.31.10 | RunAnywhere SDK compatibility |
+| Gradle | 8.13 | Gradle 9.0+ causes build errors |
 
-1. Update the `CREATE TABLE` statement in `DatabaseService.ts` → `getDb()`
-2. Update the `Transaction` interface in the same file
-3. Update the web fallback (`webFallback`) to match
-4. Update any insert/query functions that touch the changed columns
-
-### Working with RunAnywhere models
-
-Models are registered and loaded in `ModelService.tsx`. To add a new model:
-
-1. Add model constants (ID, URL, memory) at the top of the file
-2. Register with `ONNX.addModel()` or `LlamaCPP.addModel()` in `initializeModel()`
-3. Download and load in the same function
-4. Expose any new methods through the context
-
-### Testing without a physical device
-
-Use the **DevScreen** (tap the gear icon on Dashboard → Dev). It has pre-filled SMS templates you can fire to test the full pipeline: SMS → amount extraction → AI categorization → confirm → save to DB.
-
-On web, the app uses:
-- In-memory store instead of SQLite
-- Mock AI responses that parse transaction data directly
-- No voice features (STT/TTS require RunAnywhere native SDK)
-
-## Important Version Constraints
-
-- **`react-native-nitro-modules`** must stay at **0.31.10** — RunAnywhere 0.18.1 uses the `updateNative` API which was removed in newer versions
-- **Gradle** must be **8.13** — if `npx expo prebuild` regenerates `android/`, it resets to 9.0 which has an `IBM_SEMERU` error. Fix in `android/gradle/wrapper/gradle-wrapper.properties`:
-  ```properties
-  distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
-  ```
-- **`android/local.properties`** must have your SDK path:
-  ```
-  sdk.dir=C:\\Users\\<YOUR_USERNAME>\\AppData\\Local\\Android\\Sdk
-  ```
-
-## Constraints
-
-- All AI inference uses `RunAnywhere.generateStream()` — never external APIs
-- All data stays in on-device SQLite — no network storage
-- Parse LLM JSON responses in try/catch — always fallback to null
-- User always confirms categories — AI only pre-selects, never auto-saves
+---
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `Gradle requires JVM 17, found JVM 8` | Set `JAVA_HOME` to Android Studio's JBR (see setup step 2) |
-| `IBM_SEMERU` error during build | Downgrade Gradle to 8.13 (see version constraints above) |
-| `SDK location not found` | Create/fix `android/local.properties` with your SDK path |
+| `react-native-sound not available` | Run `npx expo run:android` for a full native rebuild |
+| LLM slow on emulator | Expected — use a real device for best performance |
+| Models not downloading | Check internet; `adb logcat \| grep SpendAI` for progress |
 | App crashes on launch | Must use dev client build (`npx expo run:android`), not Expo Go |
-| LLM very slow on emulator | Expected on x86_64 — use physical device or set `FORCE_MOCK_LLM = true` in `ModelService.tsx` |
-| Port 8081 in use | Kill other Metro processes or `npx expo start --port 8082` |
-| Models not downloading | Check internet; watch `adb logcat \| grep SpendAI` for progress |
 
-## Tech Stack
+---
 
-| Layer | Tech |
-|-------|------|
-| Framework | Expo (managed workflow) |
-| Navigation | React Navigation 7 (native stack) |
-| Database | expo-sqlite (SQLite on device) |
-| AI Runtime | RunAnywhere SDK (LlamaCPP + ONNX) |
-| LLM | LFM2-350M (on-device, GGUF) |
-| STT | Whisper Tiny (on-device, ONNX) |
-| TTS | Piper Lessac (on-device, ONNX) |
-| VAD | Silero VAD (on-device, ONNX) |
-| Voice Recording | react-native-live-audio-stream (raw PCM 16kHz) |
-| TTS Playback | expo-av |
-| SMS | react-native-sms-listener |
-| Notifications | expo-notifications |
+## Team
+
+Built for the **RunAnywhere Hackathon** — March 2026.
+
+---
+
+*All AI inference runs on-device. No data leaves your phone. Ever.*
