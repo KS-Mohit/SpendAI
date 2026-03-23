@@ -163,9 +163,9 @@ npx expo run:android
 
 ## Team 
 
-- **_```Paras Saxena```_**
-- **_```Sunil Sharma```_**
-- **_```Mohit Kumar```_**
+- **Paras Saxena**
+- **Sunil Sharma**
+- **Mohit Kumar**
 
 ---
 
