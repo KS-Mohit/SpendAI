@@ -20,6 +20,11 @@ Every finance app today uploads your transaction data to the cloud. SpendAI take
 
 ---
 
+## Promotional Website
+Check out our Promotional Website: [**SpendAI**](https://spendai-ttkb.vercel.app/)
+
+---
+
 ## Features
 
 ### Expense Tracking
@@ -156,9 +161,11 @@ npx expo run:android
 
 ---
 
-## Team
+## Team 
 
-Built for the **RunAnywhere Hackathon** — March 2026.
+- **_```Paras Saxena```_**
+- **_```Sunil Sharma```_**
+- **_```Mohit Kumar```_**
 
 ---
 
