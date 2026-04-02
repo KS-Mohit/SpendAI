@@ -396,7 +396,7 @@
                         data-icon="keyboard_voice">keyboard_voice</span>
                     <h3 class="text-xl font-bold text-white mb-3">Voice Assistant</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed">Log expenses using your voice. Powered by
-                        Whisper Tiny ONNX for real-time speech-to-text processing.</p>
+                        Whisper Base ONNX for real-time speech-to-text processing.</p>
                 </div>
                 <!-- Card 4 -->
                 <div
@@ -731,64 +731,54 @@
                     class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
                     <div class="space-y-1">
                         <div class="flex items-center gap-3">
-                            <span class="text-lg font-bold text-white">LFM2-350M</span>
+                            <span class="text-lg font-bold text-white">Qwen2.5 0.5B Instruct</span>
                             <span
-                                class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">350M
-                                PARAMS</span>
+                                class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">Q8_0
+                                GGUF</span>
+                            <span
+                                class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">LLAMACPP</span>
                         </div>
-                        <p class="text-sm text-on-surface-variant">Core Logic &amp; Transaction Categorization</p>
+                        <p class="text-sm text-on-surface-variant">Chat, categorization, spending analysis</p>
                     </div>
                     <div class="mt-4 md:mt-0">
                         <span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model
-                            Weight: 210MB</span>
+                            Weight: 700MB</span>
                     </div>
                 </div>
                 <div
                     class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
                     <div class="space-y-1">
                         <div class="flex items-center gap-3">
-                            <span class="text-lg font-bold text-white">Whisper Tiny ONNX</span>
+                            <span class="text-lg font-bold text-white">Whisper Base English</span>
                             <span
                                 class="bg-secondary/10 text-secondary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-secondary/20">STT
                                 ENGINE</span>
+                            <span
+                                class="bg-secondary/10 text-secondary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-secondary/20">SHERPA-ONNX</span>
                         </div>
-                        <p class="text-sm text-on-surface-variant">High-fidelity voice-to-text processing on-chip</p>
+                        <p class="text-sm text-on-surface-variant">Speech-to-Text (16kHz mono)</p>
                     </div>
                     <div class="mt-4 md:mt-0">
                         <span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model
-                            Weight: 39MB</span>
+                            Weight: 150MB</span>
                     </div>
                 </div>
                 <div
                     class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
                     <div class="space-y-1">
                         <div class="flex items-center gap-3">
-                            <span class="text-lg font-bold text-white">Piper Lessac ONNX</span>
+                            <span class="text-lg font-bold text-white">Piper Lessac Medium</span>
                             <span
                                 class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">TTS
                                 ENGINE</span>
-                        </div>
-                        <p class="text-sm text-on-surface-variant">Natural voice feedback for financial queries</p>
-                    </div>
-                    <div class="mt-4 md:mt-0">
-                        <span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model
-                            Weight: 28MB</span>
-                    </div>
-                </div>
-                <div
-                    class="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-3">
-                            <span class="text-lg font-bold text-white">Silero VAD</span>
                             <span
-                                class="bg-secondary/10 text-secondary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-secondary/20">VOICE
-                                ACTIVITY</span>
+                                class="bg-primary/10 text-primary text-[0.6rem] px-2 py-0.5 rounded font-bold border border-primary/20">SHERPA-ONNX</span>
                         </div>
-                        <p class="text-sm text-on-surface-variant">Efficient silence and speech detection</p>
+                        <p class="text-sm text-on-surface-variant">Text-to-Speech (US English)</p>
                     </div>
                     <div class="mt-4 md:mt-0">
                         <span class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Model
-                            Weight: 2MB</span>
+                            Weight: 65MB</span>
                     </div>
                 </div>
                 <div
@@ -803,8 +793,8 @@
                     </div>
                     <div class="mt-4 md:mt-0">
                         <span
-                            class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">Native
-                            Acceleration</span>
+                            class="text-[0.6875rem] font-bold text-on-surface-variant uppercase tracking-widest">LlamaCPP
+                            / Sherpa-ONNX</span>
                     </div>
                 </div>
             </div>
